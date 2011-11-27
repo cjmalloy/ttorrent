@@ -296,7 +296,7 @@ public class SharingPeer extends Peer implements MessageListener {
 	 *
 	 * Delivery of the message can only happen if the peer is connected.
 	 *
-	 * @param message The message to send to the remote peer through our peer
+	 * @param message The message to send to the remote peer throh our peer
 	 * exchange.
 	 */
 	public void send(Message message) throws IllegalStateException {
