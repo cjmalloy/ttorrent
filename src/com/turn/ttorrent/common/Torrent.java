@@ -116,7 +116,7 @@ public class Torrent {
 
 	private final boolean seeder;
 
-	private final List<TrackerInfo> trackerList;
+	private final List<TrackerClient> trackerList;
 
 	/**
 	 * Create a new torrent from metainfo binary data.
@@ -140,7 +140,7 @@ public class Torrent {
 		this.seeder = seeder;
 
 		try {
-			this.trackerList = new ArrayList<TrackerInfo>();
+			this.trackerList = new ArrayList<TrackerClient>();
 			this.decoded = BDecoder.bdecode(
 					new ByteArrayInputStream(this.encoded)).getMap();
 
@@ -152,7 +152,8 @@ public class Torrent {
 			this.hex_info_hash = Torrent.byteArrayToHexString(this.info_hash);
 
 			this.announceUrl = this.decoded.get("announce").getString();
-			this.trackerList.add(new TrackerInfo(announceUrl));
+			this.trackerList.add(TrackerClient
+					.getTrackerClient(this.announceUrl));
 
 			List<BEValue> announceList = this.decoded.get("announce-list") != null ? this.decoded
 					.get("announce-list").getList() : null;
@@ -160,8 +161,8 @@ public class Torrent {
 			if (announceList != null) {
 				for (BEValue value : announceList) {
 					for (BEValue value2 : value.getList()) {
-						this.trackerList
-								.add(new TrackerInfo(value2.getString()));
+						this.trackerList.add(TrackerClient
+								.getTrackerClient(value2.getString()));
 					}
 				}
 			}
@@ -319,7 +320,7 @@ public class Torrent {
 		return this.seeder;
 	}
 
-	public List<TrackerInfo> getTrackerList() {
+	public List<TrackerClient> getTrackerList() {
 		return trackerList;
 	}
 

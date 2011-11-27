@@ -15,16 +15,17 @@
 
 package com.turn.ttorrent.client;
 
-import com.turn.ttorrent.bcodec.BEValue;
-
 import java.util.EventListener;
-import java.util.Map;
+import java.util.List;
 
-/** EventListener interface for objects that want to receive tracker responses.
- *
+import com.turn.ttorrent.common.Peer;
+
+/**
+ * EventListener interface for objects that want to receive tracker responses.
+ * 
  * @author mpetazzoni
  */
 public interface AnnounceResponseListener extends EventListener {
 
-	public void handleAnnounceResponse(Map<String, BEValue> answer);
+	public void handleAnnounceResponse(List<Peer> answer);
 }

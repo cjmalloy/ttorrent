@@ -15,31 +15,22 @@
 
 package com.turn.ttorrent.client;
 
-import com.turn.ttorrent.bcodec.BDecoder;
-import com.turn.ttorrent.bcodec.BEValue;
-import com.turn.ttorrent.bcodec.InvalidBEncodingException;
-import com.turn.ttorrent.common.Torrent;
-import com.turn.ttorrent.common.TrackerInfo;
-
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.bcodec.BEValue;
+import com.turn.ttorrent.bcodec.InvalidBEncodingException;
+import com.turn.ttorrent.common.Peer;
+import com.turn.ttorrent.common.TrackerClient;
 
 /**
  * BitTorrent client tracker announce thread.
@@ -100,7 +91,7 @@ public class Announce implements Runnable, AnnounceResponseListener {
 	 * specified by the tracker itself, allowing the tracker to refresh this
 	 * peer's status and acknowledge that it is still there.
 	 */
-	private enum AnnounceEvent {
+	public enum AnnounceEvent {
 		NONE, STARTED, STOPPED, COMPLETED;
 	};
 
@@ -264,39 +255,11 @@ public class Announce implements Runnable, AnnounceResponseListener {
 	 * @return The decoded tracker response is also returned.
 	 */
 	private void announce(AnnounceEvent event, boolean inhibitEvent) {
-		Map<String, String> params = new HashMap<String, String>();
-
-		try {
-			params.put("info_hash", new String(torrent.getInfoHash(),
-					Torrent.BYTE_ENCODING));
-
-			// Also throw in there the hex-encoded info-hash for easier
-			// debugging of announce requests.
-			params.put("info_hash_hex",
-					Torrent.toHexString(params.get("info_hash")));
-		} catch (UnsupportedEncodingException uee) {
-			logger.warn("{}", uee.getMessage());
-		}
-
-		params.put("peer_id", this.id);
-		params.put("port", new Integer(this.address.getPort()).toString());
-		params.put("uploaded", new Long(this.torrent.getUploaded()).toString());
-		params.put("downloaded",
-				new Long(this.torrent.getDownloaded()).toString());
-		params.put("left", new Long(this.torrent.getLeft()).toString());
-
-		if (!AnnounceEvent.NONE.equals(event)) {
-			params.put("event", event.name().toLowerCase());
-		}
-
-		params.put("ip", this.address.getAddress().getHostAddress());
-		params.put("compact", "1");
 
 		if (this.torrent.getTrackerList() != null)
-			for (TrackerInfo tracker : this.torrent.getTrackerList()) {
+			for (TrackerClient tracker : this.torrent.getTrackerList()) {
 
 				try {
-					Map<String, BEValue> result = null;
 					try {
 						logger.debug("Announcing "
 								+ (!AnnounceEvent.NONE.equals(event) ? event
@@ -306,94 +269,30 @@ public class Announce implements Runnable, AnnounceResponseListener {
 								+ this.torrent.getDownloaded() + "D/"
 								+ this.torrent.getLeft() + "L bytes for "
 								+ this.torrent.getName() + "...");
-						URI u = new URI(tracker.getTrackerUrl());
-
-						if (u.getScheme().equals("udp")) {
-							byte[] receiveData = new byte[1024];
-							DatagramSocket clientSocket = new DatagramSocket();
-							clientSocket.setSoTimeout(10 * 1000);
-							InetAddress IPAddress = InetAddress.getByName(u
-									.getHost());
-
-							DatagramPacket sendPacket = new DatagramPacket(
-									new byte[0], 0, IPAddress, u.getPort());
-							clientSocket.send(sendPacket);
-							DatagramPacket receivePacket = new DatagramPacket(
-									receiveData, receiveData.length);
-							clientSocket.receive(receivePacket);
-							// receivePacket.getData()
-							clientSocket.close();
-						} else {
-							URL announce = this.buildAnnounceURL(
-									tracker.getTrackerUrl(), params);
-							URLConnection conn = announce.openConnection();
-							InputStream is = conn.getInputStream();
-							result = BDecoder.bdecode(is).getMap();
-							is.close();
-						}
+						List<Peer> result = tracker.announce(event, torrent,
+								this.id, this.address);
 
 						if (!inhibitEvent) {
 							for (AnnounceResponseListener listener : this.listeners) {
 								listener.handleAnnounceResponse(result);
 							}
 						}
+
 					} catch (UnsupportedEncodingException uee) {
 						logger.error("{}", uee.getMessage(), uee);
-						// this.stop(true);
 					} catch (MalformedURLException mue) {
 						logger.error("{}", mue.getMessage(), mue);
-						// this.stop(true);
 					} catch (InvalidBEncodingException ibee) {
 						logger.error("Error parsing tracker response: {}",
 								ibee.getMessage(), ibee);
-						// this.stop(true);
 					} catch (IOException ioe) {
 						logger.warn("Error reading response from tracker: {}",
 								ioe.getMessage());
-					} finally {
-						if (result != null
-								&& result.containsKey("failure reason")) {
-							try {
-								logger.warn("{}", result.get("failure reason")
-										.getString());
-							} catch (InvalidBEncodingException ibee) {
-								logger.warn("Announce error, and couldn't parse "
-										+ "failure reason!");
-							}
-
-							result = null;
-						}
 					}
 				} catch (Exception ex) {
 					logger.error(ex.toString(), ex);
 				}
 			}
-		// return result;
-	}
-
-	/**
-	 * Build the announce request URL from the provided parameters.
-	 * 
-	 * @param params
-	 *            The key/value parameters pairs in a map.
-	 * @return The URL object representing the announce request URL.
-	 */
-	private URL buildAnnounceURL(String serverUrl, Map<String, String> params)
-			throws UnsupportedEncodingException, MalformedURLException {
-		StringBuilder url = new StringBuilder(serverUrl);
-
-		if (params.size() != 0) {
-			url.append("?");
-		}
-
-		for (Map.Entry<String, String> param : params.entrySet()) {
-			url.append(param.getKey())
-					.append("=")
-					.append(URLEncoder.encode(param.getValue(),
-							Torrent.BYTE_ENCODING)).append("&");
-		}
-
-		return new URL(url.toString().substring(0, url.length() - 1));
 	}
 
 	/**

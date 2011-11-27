@@ -12,7 +12,6 @@ public class TrackerInfo {
 	}
 
 	private final String trackerUrl;
-	private final long UDP_CONNECTION_MAGIC = 0x41727101980L;
 	private long udpConnectionId;
 	private Status status = Status.NOT_CONNECTED;
 
