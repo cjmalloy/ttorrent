@@ -33,8 +33,11 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.ConsoleAppender;
@@ -118,6 +121,8 @@ public class Client extends Observable implements Runnable,
 	private ConcurrentMap<String, SharingPeer> connected;
 
 	private Random random;
+
+	private ExecutorService peerExecutor = Executors.newFixedThreadPool(20);
 
 	/**
 	 * Initialize the BitTorrent client.
@@ -585,14 +590,15 @@ public class Client extends Observable implements Runnable,
 
 			if (announcedMessage.getPeers() != null) {
 				for (Peer peer : announcedMessage.getPeers())
-					try {
-						this.processAnnouncedPeer(
-								peer.getPeerId() != null ? peer.getPeerId()
-										.array() : null, peer.getIp(), peer
-										.getPort());
-					} catch (Exception e) {
-						logger.error("{}", e.getMessage(), e);
-					}
+					/*
+					 * try { this.processAnnouncedPeer( peer.getPeerId() != null
+					 * ? peer.getPeerId() .array() : null, peer.getIp(), peer
+					 * .getPort()); } catch (Exception e) { logger.error("{}",
+					 * e.getMessage(), e); }
+					 */
+
+					// add to executor
+					peerExecutor.submit(new CallablePeerAnnounce(peer));
 			}
 		}
 	}
@@ -867,6 +873,26 @@ public class Client extends Observable implements Runnable,
 		} catch (Exception e) {
 			logger.error("Fatal error: {}", e.getMessage(), e);
 			System.exit(2);
+		}
+	}
+
+	public class CallablePeerAnnounce implements Runnable {
+
+		private final Peer peer;
+
+		public CallablePeerAnnounce(Peer peer) {
+			this.peer = peer;
+		}
+
+		@Override
+		public void run() {
+			try {
+				processAnnouncedPeer(peer.getPeerId() != null ? peer
+						.getPeerId().array() : null, peer.getIp(),
+						peer.getPort());
+			} catch (Exception e) {
+				logger.error("{}", e.getMessage(), e);
+			}
 		}
 	}
 }

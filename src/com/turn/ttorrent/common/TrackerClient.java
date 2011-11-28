@@ -28,9 +28,9 @@ import com.turn.ttorrent.client.Announce.AnnounceEvent;
 import com.turn.ttorrent.client.SharedTorrent;
 import com.turn.ttorrent.client.message.TrackerMessage;
 import com.turn.ttorrent.client.message.TrackerMessage.AnnounceUDPTrackerMessage;
+import com.turn.ttorrent.client.message.TrackerMessage.ConnectUDPTrackerMessage;
 import com.turn.ttorrent.client.message.TrackerMessage.HttpTrackerMessage;
 import com.turn.ttorrent.client.message.TrackerMessage.UDPTrackerMessage;
-import com.turn.ttorrent.client.message.TrackerMessage.UDPTrackerMessage.ConnectUDPTrackerMessage;
 
 /**
  * Talks to trackers.
@@ -211,6 +211,40 @@ public abstract class TrackerClient {
 					.getData().array();
 			TrackerMessage message = UDPTrackerMessage.parse(send(request),
 					torrent);
+
+			TrackerMessage message2 = message;
+			try {
+
+				while (message2 instanceof AnnounceUDPTrackerMessage
+						&& ((AnnounceUDPTrackerMessage) message2).getPeers()
+								.size() == 50) {
+					AnnounceUDPTrackerMessage aMessage = (AnnounceUDPTrackerMessage) message;
+
+					request = AnnounceUDPTrackerMessage
+							.craft(event, getConnectionId(), torrent, id,
+									address).getData().array();
+
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+
+					}
+
+					message2 = UDPTrackerMessage.parse(send(request), torrent);
+					if (message2 != null
+							&& message2 instanceof AnnounceUDPTrackerMessage) {
+						aMessage.getPeers().addAll(
+								((AnnounceUDPTrackerMessage) message2)
+										.getPeers());
+						if (aMessage.getPeers().size() >= (aMessage
+								.getLeechers() + aMessage.getSeeders())) {
+							break;
+						}
+					}
+				}
+			} catch (Exception e) {
+				logger.error("{}", e.toString());
+			}
 
 			return message;
 		}

@@ -238,8 +238,6 @@ public abstract class TrackerMessage {
 	 * 
 	 */
 	public static class UDPTrackerMessage extends TrackerMessage {
-		private static final long UDP_CONNECTION_MAGIC = 0x41727101980L;
-
 		private ByteBuffer data;
 		private int transactionId;
 		private long connectionId;
@@ -333,33 +331,35 @@ public abstract class TrackerMessage {
 
 		}
 
-		public static class ConnectUDPTrackerMessage extends UDPTrackerMessage {
-			static final int BASE_SIZE = 16;
+	}
 
-			public ConnectUDPTrackerMessage(ByteBuffer buffer,
-					long connectionId, int transactionId) {
-				super(Type.CONNECT, buffer, connectionId, transactionId);
-			}
+	public static class ConnectUDPTrackerMessage extends UDPTrackerMessage {
+		private static final long UDP_CONNECTION_MAGIC = 0x41727101980L;
+		static final int BASE_SIZE = 16;
 
-			public static ConnectUDPTrackerMessage parse(ByteBuffer buffer,
-					SharedTorrent torrent) throws MessageValidationException {
-				buffer.rewind();
-				buffer.getInt();
-				return (ConnectUDPTrackerMessage) new ConnectUDPTrackerMessage(
-						buffer, buffer.getLong(), buffer.getInt())
-						.validate(torrent);
-			}
+		public ConnectUDPTrackerMessage(ByteBuffer buffer, long connectionId,
+				int transactionId) {
+			super(Type.CONNECT, buffer, connectionId, transactionId);
+		}
 
-			public static ConnectUDPTrackerMessage craft() {
-				int trId = UDPTrackerMessage.generateTransactionId();
-				ByteBuffer buffer = ByteBuffer
-						.allocate(ConnectUDPTrackerMessage.BASE_SIZE);
-				buffer.putLong(UDP_CONNECTION_MAGIC);
-				buffer.putInt(Type.CONNECT.getTypeByte());
-				buffer.putInt(trId);
-				return new ConnectUDPTrackerMessage(buffer,
-						UDP_CONNECTION_MAGIC, trId);
-			}
+		public static ConnectUDPTrackerMessage parse(ByteBuffer buffer,
+				SharedTorrent torrent) throws MessageValidationException {
+			buffer.rewind();
+			buffer.getInt();
+			return (ConnectUDPTrackerMessage) new ConnectUDPTrackerMessage(
+					buffer, buffer.getLong(), buffer.getInt())
+					.validate(torrent);
+		}
+
+		public static ConnectUDPTrackerMessage craft() {
+			int trId = UDPTrackerMessage.generateTransactionId();
+			ByteBuffer buffer = ByteBuffer
+					.allocate(ConnectUDPTrackerMessage.BASE_SIZE);
+			buffer.putLong(UDP_CONNECTION_MAGIC);
+			buffer.putInt(Type.CONNECT.getTypeByte());
+			buffer.putInt(trId);
+			return new ConnectUDPTrackerMessage(buffer, UDP_CONNECTION_MAGIC,
+					trId);
 		}
 	}
 
@@ -367,11 +367,14 @@ public abstract class TrackerMessage {
 			implements IAnnounceTrackerMessage {
 		static final int BASE_SIZE = 98;
 		private final List<Peer> peers;
+		private final int leechers, seeders;
 
 		public AnnounceUDPTrackerMessage(ByteBuffer buffer, long connectionId,
-				int transactionId, List<Peer> peers) {
+				int transactionId, List<Peer> peers, int leechers, int seeders) {
 			super(Type.ANNOUNCE, buffer, connectionId, transactionId);
 			this.peers = peers;
+			this.seeders = seeders;
+			this.leechers = leechers;
 		}
 
 		@SuppressWarnings("unused")
@@ -387,19 +390,23 @@ public abstract class TrackerMessage {
 			int leechers = buffer.getInt();
 			int seeders = buffer.getInt();
 
-			while (buffer.remaining() > 6) {
+			while (buffer.remaining() >= 6) {
 				byte[] ip = new byte[4];
 				buffer.get(ip);
-				int port = buffer.getShort();
-				if (port < 0)
-					port += 65536;
+
+				byte[] port = new byte[2];
+				buffer.get(port);
+
+				int p = (port[1] >= 0 ? port[1] : port[1] + 256) * 256
+						+ (port[0] >= 0 ? port[0] : port[0] + 256);
+
 				Peer peer = new Peer(InetAddress.getByAddress(ip).toString(),
-						port, null);
+						p, null);
 				result.add(peer);
 			}
 
 			return new AnnounceUDPTrackerMessage(buffer, 0, transactionId,
-					result);
+					result, leechers, seeders);
 		}
 
 		public static AnnounceUDPTrackerMessage craft(AnnounceEvent event,
@@ -440,16 +447,24 @@ public abstract class TrackerMessage {
 			buffer.put(add);
 
 			buffer.putInt(0);
-			buffer.putInt(100);
+			buffer.putInt(50);
 			buffer.putShort((short) address.getPort());
 
 			return new AnnounceUDPTrackerMessage(buffer, connectionId,
-					transactionId, null);
+					transactionId, null, -1, -1);
 		}
 
 		@Override
 		public List<Peer> getPeers() {
 			return peers;
+		}
+
+		public int getLeechers() {
+			return leechers;
+		}
+
+		public int getSeeders() {
+			return seeders;
 		}
 
 	}
