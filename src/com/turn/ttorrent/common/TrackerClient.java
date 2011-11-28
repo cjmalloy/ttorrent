@@ -30,6 +30,7 @@ import com.turn.ttorrent.bcodec.InvalidBEncodingException;
 import com.turn.ttorrent.client.Announce.AnnounceEvent;
 import com.turn.ttorrent.client.SharedTorrent;
 import com.turn.ttorrent.client.UDPTrackerMessage.ConnectUDPMessage;
+import com.turn.ttorrent.client.message.TrackerMessage;
 
 /**
  * Talks to trackers.
@@ -41,13 +42,17 @@ public abstract class TrackerClient {
 	private static final Logger logger = LoggerFactory
 			.getLogger(TrackerClient.class);
 
+	public enum Status {
+		CONNECTED, NOT_CONNECTED;
+	}
+
 	protected final String trackerUrl;
 
 	public TrackerClient(String url) {
 		this.trackerUrl = url;
 	}
 
-	public abstract List<Peer> announce(AnnounceEvent event,
+	public abstract TrackerMessage announce(AnnounceEvent event,
 			SharedTorrent torrent, String id, InetSocketAddress address)
 			throws Exception;
 
@@ -67,8 +72,9 @@ public abstract class TrackerClient {
 		}
 
 		@Override
-		public List<Peer> announce(AnnounceEvent event, SharedTorrent torrent,
-				String id, InetSocketAddress address) throws Exception {
+		public TrackerMessage announce(AnnounceEvent event,
+				SharedTorrent torrent, String id, InetSocketAddress address)
+				throws Exception {
 			URL announce = this.buildAnnounceURL(this.trackerUrl,
 					prepareParameters(event, torrent, id, address));
 			URLConnection conn = announce.openConnection();
@@ -227,8 +233,9 @@ public abstract class TrackerClient {
 		}
 
 		@Override
-		public List<Peer> announce(AnnounceEvent event, SharedTorrent torrent,
-				String id, InetSocketAddress address) throws Exception {
+		public TrackerMessage announce(AnnounceEvent event,
+				SharedTorrent torrent, String id, InetSocketAddress address)
+				throws Exception {
 			URI uri = new URI(this.trackerUrl);
 
 			byte[] receiveData = new byte[1024];

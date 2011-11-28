@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-package com.turn.ttorrent.client;
+package com.turn.ttorrent.client.message;
 
-import com.turn.ttorrent.client.Message;
-import com.turn.ttorrent.client.Message;
+import com.turn.ttorrent.client.SharedTorrent;
+import com.turn.ttorrent.client.message.Message;
 
 import java.nio.ByteBuffer;
 import java.text.ParseException;

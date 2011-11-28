@@ -15,8 +15,8 @@
 
 package com.turn.ttorrent.client.peer;
 
-import com.turn.ttorrent.client.Message;
 import com.turn.ttorrent.client.SharedTorrent;
+import com.turn.ttorrent.client.message.Message;
 
 import java.io.DataInputStream;
 import java.io.IOException;

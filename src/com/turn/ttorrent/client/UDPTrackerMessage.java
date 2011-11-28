@@ -4,6 +4,8 @@ import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.util.Random;
 
+import com.turn.ttorrent.client.message.Message;
+
 /**
  * Parse and create UDP Tracker messages
  * 

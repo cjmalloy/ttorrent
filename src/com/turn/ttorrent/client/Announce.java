@@ -20,7 +20,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -29,7 +28,8 @@ import org.slf4j.LoggerFactory;
 
 import com.turn.ttorrent.bcodec.BEValue;
 import com.turn.ttorrent.bcodec.InvalidBEncodingException;
-import com.turn.ttorrent.common.Peer;
+import com.turn.ttorrent.client.message.TrackerMessage;
+import com.turn.ttorrent.client.message.TrackerMessage.HttpTrackerMessage;
 import com.turn.ttorrent.common.TrackerClient;
 
 /**
@@ -269,8 +269,9 @@ public class Announce implements Runnable, AnnounceResponseListener {
 								+ this.torrent.getDownloaded() + "D/"
 								+ this.torrent.getLeft() + "L bytes for "
 								+ this.torrent.getName() + "...");
-						List<Peer> result = tracker.announce(event, torrent,
-								this.id, this.address);
+
+						TrackerMessage result = tracker.announce(event,
+								torrent, this.id, this.address);
 
 						if (!inhibitEvent) {
 							for (AnnounceResponseListener listener : this.listeners) {
@@ -298,11 +299,16 @@ public class Announce implements Runnable, AnnounceResponseListener {
 	/**
 	 * Handle an announce request answer to set the announce interval.
 	 */
-	public void handleAnnounceResponse(Map<String, BEValue> answer) {
+	public void handleAnnounceResponse(TrackerMessage message) {
 		try {
-			if (answer != null && answer.containsKey("interval")) {
-				this.interval = answer.get("interval").getInt();
-				this.initial = false;
+			if (message instanceof HttpTrackerMessage) {
+				HttpTrackerMessage httpTrackerMessage = (HttpTrackerMessage) message;
+				Map<String, BEValue> answer = httpTrackerMessage.getResponse();
+
+				if (answer != null && answer.containsKey("interval")) {
+					this.interval = answer.get("interval").getInt();
+					this.initial = false;
+				}
 			}
 		} catch (InvalidBEncodingException ibee) {
 			this.stop(true);
