@@ -18,6 +18,7 @@ package com.turn.ttorrent.common;
 import com.turn.ttorrent.bcodec.BDecoder;
 import com.turn.ttorrent.bcodec.BEValue;
 import com.turn.ttorrent.bcodec.BEncoder;
+import com.turn.ttorrent.bcodec.InvalidBEncodingException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -27,6 +28,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -155,17 +157,7 @@ public class Torrent {
 			this.trackerList.add(TrackerClient
 					.getTrackerClient(this.announceUrl));
 
-			List<BEValue> announceList = this.decoded.get("announce-list") != null ? this.decoded
-					.get("announce-list").getList() : null;
-
-			if (announceList != null) {
-				for (BEValue value : announceList) {
-					for (BEValue value2 : value.getList()) {
-						this.trackerList.add(TrackerClient
-								.getTrackerClient(value2.getString()));
-					}
-				}
-			}
+			processAnnouncedTrackerList(this.decoded.get("announce-list"));
 
 			this.createdBy = this.decoded.containsKey("created by") ? this.decoded
 					.get("created by").getString() : null;
@@ -228,6 +220,20 @@ public class Torrent {
 		}
 
 		logger.info("  Total size: {} byte(s)", this.size);
+	}
+
+	private void processAnnouncedTrackerList(BEValue value)
+			throws URISyntaxException, InvalidBEncodingException {
+		if (value != null && value.getValue() != null) {
+			if (value.getValue() instanceof byte[]) {
+				this.trackerList.add(TrackerClient.getTrackerClient(value
+						.getString()));
+			} else if (value.getValue() instanceof List) {
+				for (BEValue listValue : value.getList()) {
+					processAnnouncedTrackerList(listValue);
+				}
+			}
+		}
 	}
 
 	/**

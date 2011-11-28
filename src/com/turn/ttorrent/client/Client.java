@@ -586,8 +586,10 @@ public class Client extends Observable implements Runnable,
 			if (announcedMessage.getPeers() != null) {
 				for (Peer peer : announcedMessage.getPeers())
 					try {
-						this.processAnnouncedPeer(peer.getPeerId().array(),
-								peer.getIp(), peer.getPort());
+						this.processAnnouncedPeer(
+								peer.getPeerId() != null ? peer.getPeerId()
+										.array() : null, peer.getIp(), peer
+										.getPort());
 					} catch (Exception e) {
 						logger.error("{}", e.getMessage(), e);
 					}

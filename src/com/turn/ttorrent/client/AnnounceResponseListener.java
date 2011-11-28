@@ -16,12 +16,8 @@
 package com.turn.ttorrent.client;
 
 import java.util.EventListener;
-import java.util.List;
-import java.util.Map;
 
-import com.turn.ttorrent.bcodec.BEValue;
 import com.turn.ttorrent.client.message.TrackerMessage;
-import com.turn.ttorrent.common.Peer;
 
 /**
  * EventListener interface for objects that want to receive tracker responses.

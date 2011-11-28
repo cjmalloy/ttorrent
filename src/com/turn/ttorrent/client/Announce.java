@@ -92,7 +92,17 @@ public class Announce implements Runnable, AnnounceResponseListener {
 	 * peer's status and acknowledge that it is still there.
 	 */
 	public enum AnnounceEvent {
-		NONE, STARTED, STOPPED, COMPLETED;
+		NONE(0), STARTED(2), STOPPED(3), COMPLETED(1);
+
+		private final int id;
+
+		private AnnounceEvent(int id) {
+			this.id = id;
+		}
+
+		public int getId() {
+			return id;
+		}
 	};
 
 	/**
@@ -181,8 +191,7 @@ public class Announce implements Runnable, AnnounceResponseListener {
 	 */
 	@Override
 	public void run() {
-		logger.info("Starting announce thread for " + torrent.getName()
-				+ " to " + torrent.getAnnounceUrl() + "...");
+		logger.info("Starting announce thread for " + torrent.getName() + "...");
 
 		// Set an initial announce interval to 5 seconds. This will be updated
 		// in real-time by the tracker's responses to our announce requests.
@@ -263,8 +272,8 @@ public class Announce implements Runnable, AnnounceResponseListener {
 					try {
 						logger.debug("Announcing "
 								+ (!AnnounceEvent.NONE.equals(event) ? event
-										.name() + " " : "")
-								+ "to tracker with "
+										.name() + " " : "") + "to tracker "
+								+ tracker.getTrackerUrl() + " with "
 								+ this.torrent.getUploaded() + "U/"
 								+ this.torrent.getDownloaded() + "D/"
 								+ this.torrent.getLeft() + "L bytes for "

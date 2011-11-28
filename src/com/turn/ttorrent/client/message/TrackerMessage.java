@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.text.ParseException;
@@ -19,6 +20,7 @@ import com.turn.ttorrent.bcodec.BDecoder;
 import com.turn.ttorrent.bcodec.BEValue;
 import com.turn.ttorrent.bcodec.InvalidBEncodingException;
 import com.turn.ttorrent.client.SharedTorrent;
+import com.turn.ttorrent.client.Announce.AnnounceEvent;
 import com.turn.ttorrent.common.Peer;
 import com.turn.ttorrent.common.Torrent;
 
@@ -65,7 +67,8 @@ public abstract class TrackerMessage {
 	private TrackerMessage(Type type, ByteBuffer data) {
 		this.type = type;
 		this.data = data;
-		this.data.rewind();
+		if (this.data != null)
+			this.data.rewind();
 	}
 
 	public Type getType() {
@@ -78,6 +81,10 @@ public abstract class TrackerMessage {
 
 	public interface IAnnounceTrackerMessage {
 		List<Peer> getPeers();
+	}
+
+	public interface IErrorTrackerMessage {
+		String getErrorMessage();
 	}
 
 	/**
@@ -108,6 +115,8 @@ public abstract class TrackerMessage {
 			if (decoded.containsKey("peers")) {
 				return AnnounceHttpTrackerMessage.parse(buffer, decoded,
 						torrent);
+			} else if (decoded.containsKey("failure reason")) {
+				return ErrorHttpTrackerMessage.parse(buffer, decoded, torrent);
 			}
 
 			return new HttpTrackerMessage(Type.UNKNOWN, buffer, decoded);
@@ -190,6 +199,38 @@ public abstract class TrackerMessage {
 
 	}
 
+	public static class ErrorHttpTrackerMessage extends HttpTrackerMessage
+			implements IErrorTrackerMessage {
+		private final String errorMessage;
+
+		public ErrorHttpTrackerMessage(ByteBuffer data,
+				Map<String, BEValue> response, String errorMessage) {
+			super(Type.ERROR, data, response);
+			this.errorMessage = errorMessage;
+		}
+
+		@Override
+		public String getErrorMessage() {
+			return errorMessage;
+		}
+
+		public static HttpTrackerMessage parse(ByteBuffer buffer,
+				Map<String, BEValue> answer, SharedTorrent torrent) {
+			String errorMessage = "Tracker failed";
+
+			if (answer != null && answer.containsKey("failure reason")) {
+				try {
+					errorMessage = answer.get("failure reason").getString();
+					logger.warn("{}", errorMessage);
+				} catch (InvalidBEncodingException ibee) {
+					logger.warn("Announce error, and couldn't parse "
+							+ "failure reason!");
+				}
+			}
+			return new ErrorHttpTrackerMessage(buffer, answer, errorMessage);
+		}
+	}
+
 	/**
 	 * Parse and create UDP Tracker messages
 	 * 
@@ -209,7 +250,8 @@ public abstract class TrackerMessage {
 			super(type, data);
 			this.connectionId = connectionId;
 			this.transactionId = transactionId;
-			this.data.rewind();
+			if (this.data != null)
+				this.data.rewind();
 		}
 
 		public int getTransactionId() {
@@ -265,7 +307,13 @@ public abstract class TrackerMessage {
 			}
 
 			switch (type) {
-
+			case CONNECT:
+				return ConnectUDPTrackerMessage.parse(buffer, torrent);
+			case ANNOUNCE:
+				return AnnounceUDPTrackerMessage.parse(buffer, torrent);
+			case ERROR:
+				return ErrorUDPTrackerMessage.parse(buffer, torrent);
+			case SCRAPE:
 			default:
 				throw new IllegalStateException("Message type should have "
 						+ "been properly defined by now.");
@@ -285,32 +333,142 @@ public abstract class TrackerMessage {
 
 		}
 
-		public static class ConnectUDPMessage extends UDPTrackerMessage {
+		public static class ConnectUDPTrackerMessage extends UDPTrackerMessage {
 			static final int BASE_SIZE = 16;
 
-			public ConnectUDPMessage(ByteBuffer buffer, long connectionId,
-					int transactionId) {
+			public ConnectUDPTrackerMessage(ByteBuffer buffer,
+					long connectionId, int transactionId) {
 				super(Type.CONNECT, buffer, connectionId, transactionId);
 			}
 
-			public static ConnectUDPMessage parse(ByteBuffer buffer,
+			public static ConnectUDPTrackerMessage parse(ByteBuffer buffer,
 					SharedTorrent torrent) throws MessageValidationException {
 				buffer.rewind();
 				buffer.getInt();
-				return (ConnectUDPMessage) new ConnectUDPMessage(buffer,
-						buffer.getLong(), buffer.getInt()).validate(torrent);
+				return (ConnectUDPTrackerMessage) new ConnectUDPTrackerMessage(
+						buffer, buffer.getLong(), buffer.getInt())
+						.validate(torrent);
 			}
 
-			public static ConnectUDPMessage craft() {
+			public static ConnectUDPTrackerMessage craft() {
 				int trId = UDPTrackerMessage.generateTransactionId();
 				ByteBuffer buffer = ByteBuffer
-						.allocate(ConnectUDPMessage.BASE_SIZE);
+						.allocate(ConnectUDPTrackerMessage.BASE_SIZE);
 				buffer.putLong(UDP_CONNECTION_MAGIC);
 				buffer.putInt(Type.CONNECT.getTypeByte());
 				buffer.putInt(trId);
-				return new ConnectUDPMessage(buffer, UDP_CONNECTION_MAGIC, trId);
+				return new ConnectUDPTrackerMessage(buffer,
+						UDP_CONNECTION_MAGIC, trId);
 			}
 		}
 	}
 
+	public static class AnnounceUDPTrackerMessage extends UDPTrackerMessage
+			implements IAnnounceTrackerMessage {
+		static final int BASE_SIZE = 98;
+		private final List<Peer> peers;
+
+		public AnnounceUDPTrackerMessage(ByteBuffer buffer, long connectionId,
+				int transactionId, List<Peer> peers) {
+			super(Type.ANNOUNCE, buffer, connectionId, transactionId);
+			this.peers = peers;
+		}
+
+		public static AnnounceUDPTrackerMessage parse(ByteBuffer buffer,
+				SharedTorrent torrent) throws MessageValidationException {
+			buffer.rewind();
+			buffer.getLong();
+
+			int transactionId = buffer.getInt();
+			int interval = buffer.getInt();
+			int leechers = buffer.getInt();
+			int seeders = buffer.getInt();
+
+			return new AnnounceUDPTrackerMessage(buffer, 0, transactionId, null);
+		}
+
+		public static AnnounceUDPTrackerMessage craft(AnnounceEvent event,
+				long connectionId, SharedTorrent torrent, String id,
+				InetSocketAddress address) {
+			int transactionId = UDPTrackerMessage.generateTransactionId();
+			ByteBuffer buffer = ByteBuffer
+					.allocate(AnnounceUDPTrackerMessage.BASE_SIZE);
+			buffer.putLong(connectionId);
+			buffer.putInt(Type.ANNOUNCE.getTypeByte());
+			buffer.putInt(transactionId);
+
+			// info hash
+			for (int i = 0; i < 20; i++) {
+				buffer.put(torrent.getInfoHash().length > i ? torrent
+						.getInfoHash()[i] : 0);
+			}
+
+			// peer id
+			try {
+				byte[] peerIdByte = id.getBytes(Torrent.BYTE_ENCODING);
+				for (int i = 0; i < 20; i++) {
+					buffer.put(peerIdByte.length > i ? peerIdByte[i] : 0);
+				}
+			} catch (UnsupportedEncodingException uee) {
+				logger.warn("{}", uee.getMessage());
+				for (int i = 0; i < 20; i++) {
+					buffer.put((byte) 0);
+				}
+			}
+
+			buffer.putLong(torrent.getDownloaded());
+			buffer.putLong(torrent.getLeft());
+			buffer.putLong(torrent.getUploaded());
+			buffer.putInt(event.getId());
+
+			byte[] add = address.getAddress().getAddress();
+			buffer.put(add);
+
+			buffer.putInt(0);
+			buffer.putShort((short) 0);
+
+			return new AnnounceUDPTrackerMessage(buffer, connectionId,
+					transactionId, null);
+		}
+
+		@Override
+		public List<Peer> getPeers() {
+			return peers;
+		}
+
+	}
+
+	public static class ErrorUDPTrackerMessage extends UDPTrackerMessage
+			implements IErrorTrackerMessage {
+		private final String errorMessage;
+
+		public ErrorUDPTrackerMessage(ByteBuffer buffer, long connectionId,
+				int transactionId, String errorMessage) {
+			super(Type.ERROR, buffer, connectionId, transactionId);
+			this.errorMessage = errorMessage;
+		}
+
+		@Override
+		public String getErrorMessage() {
+			return errorMessage;
+		}
+
+		public static ErrorUDPTrackerMessage parse(ByteBuffer buffer,
+				SharedTorrent torrent) throws MessageValidationException {
+			buffer.rewind();
+			buffer.getInt();
+			int transactionId = buffer.getInt();
+			String errorMessage = "Tracker failed";
+			try {
+				errorMessage = new String(buffer.array(), 8,
+						buffer.array().length - 8);
+				logger.warn("{}", errorMessage);
+			} catch (Exception e) {
+				logger.error("{}", e.toString());
+			}
+
+			return new ErrorUDPTrackerMessage(buffer, 0, transactionId,
+					errorMessage);
+		}
+	}
 }

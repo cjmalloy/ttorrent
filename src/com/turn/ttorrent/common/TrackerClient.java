@@ -1,6 +1,7 @@
 package com.turn.ttorrent.common;
 
-import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
@@ -13,12 +14,8 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -26,11 +23,14 @@ import org.slf4j.LoggerFactory;
 
 import com.turn.ttorrent.bcodec.BDecoder;
 import com.turn.ttorrent.bcodec.BEValue;
-import com.turn.ttorrent.bcodec.InvalidBEncodingException;
+import com.turn.ttorrent.bcodec.BEncoder;
 import com.turn.ttorrent.client.Announce.AnnounceEvent;
 import com.turn.ttorrent.client.SharedTorrent;
-import com.turn.ttorrent.client.UDPTrackerMessage.ConnectUDPMessage;
 import com.turn.ttorrent.client.message.TrackerMessage;
+import com.turn.ttorrent.client.message.TrackerMessage.AnnounceUDPTrackerMessage;
+import com.turn.ttorrent.client.message.TrackerMessage.HttpTrackerMessage;
+import com.turn.ttorrent.client.message.TrackerMessage.UDPTrackerMessage;
+import com.turn.ttorrent.client.message.TrackerMessage.UDPTrackerMessage.ConnectUDPTrackerMessage;
 
 /**
  * Talks to trackers.
@@ -47,9 +47,14 @@ public abstract class TrackerClient {
 	}
 
 	protected final String trackerUrl;
+	private Status status = Status.NOT_CONNECTED;
 
 	public TrackerClient(String url) {
 		this.trackerUrl = url;
+	}
+
+	public String getTrackerUrl() {
+		return trackerUrl;
 	}
 
 	public abstract TrackerMessage announce(AnnounceEvent event,
@@ -65,6 +70,20 @@ public abstract class TrackerClient {
 			return new HttpTrackerClient(url);
 	}
 
+	public Status getStatus() {
+		return status;
+	}
+
+	public void setStatus(Status status) {
+		this.status = status;
+	}
+
+	/**
+	 * Talks to Http tracker
+	 * 
+	 * @author AnDyX
+	 * 
+	 */
 	public static class HttpTrackerClient extends TrackerClient {
 
 		public HttpTrackerClient(String url) {
@@ -81,88 +100,11 @@ public abstract class TrackerClient {
 			InputStream is = conn.getInputStream();
 			Map<String, BEValue> result = BDecoder.bdecode(is).getMap();
 			is.close();
-			return handleAnnounceResponse(result);
-		}
-
-		private List<Peer> handleAnnounceResponse(Map<String, BEValue> answer)
-				throws Exception {
-			List<Peer> result = new ArrayList<Peer>();
-
-			if (answer != null && answer.containsKey("failure reason")) {
-				try {
-					logger.warn("{}", answer.get("failure reason").getString());
-				} catch (InvalidBEncodingException ibee) {
-					logger.warn("Announce error, and couldn't parse "
-							+ "failure reason!");
-				}
-
-				throw new Exception("Tracker failed");
-			}
-
-			try {
-				if (!answer.containsKey("peers")) {
-					// No peers returned by the tracker. Apparently we're alone
-					// on
-					// this one for now.
-					return result;
-				}
-
-				try {
-					List<BEValue> peers = answer.get("peers").getList();
-
-					logger.debug("Got tracker response with {} peer(s).",
-							peers.size());
-					for (BEValue peerInfo : peers) {
-						Map<String, BEValue> info = peerInfo.getMap();
-
-						try {
-							byte[] peerId = info.get("peer id").getBytes();
-							String ip = new String(info.get("ip").getBytes(),
-									Torrent.BYTE_ENCODING);
-							int port = info.get("port").getInt();
-
-							result.add(new Peer(ip, port, ByteBuffer
-									.wrap(peerId)));
-						} catch (NullPointerException npe) {
-							throw new ParseException("Missing field from peer "
-									+ "information in tracker response!", 0);
-						}
-					}
-				} catch (InvalidBEncodingException ibee) {
-					byte[] data = answer.get("peers").getBytes();
-					int nPeers = data.length / 6;
-					if (data.length % 6 != 0) {
-						throw new InvalidBEncodingException("Invalid peers "
-								+ "binary information string!");
-					}
-
-					ByteBuffer peers = ByteBuffer.wrap(data);
-					logger.debug(
-							"Got compact tracker response with {} peer(s).",
-							nPeers);
-
-					for (int i = 0; i < nPeers; i++) {
-						byte[] ipBytes = new byte[4];
-						peers.get(ipBytes);
-						String ip = InetAddress.getByAddress(ipBytes)
-								.getHostAddress();
-						int port = (0xFF & (int) peers.get()) << 8
-								| (0xFF & (int) peers.get());
-						result.add(new Peer(ip, port, null));
-					}
-				}
-
-			} catch (UnknownHostException uhe) {
-				logger.warn("Invalid compact tracker response!", uhe);
-			} catch (ParseException pe) {
-				logger.warn("Invalid tracker response!", pe);
-			} catch (InvalidBEncodingException ibee) {
-				logger.warn("Invalid tracker response!", ibee);
-			} catch (UnsupportedEncodingException uee) {
-				logger.error("{}", uee.getMessage(), uee);
-			}
-
-			return result;
+			ByteArrayOutputStream os = new ByteArrayOutputStream();
+			BEncoder.bencode(result, os);
+			os.close();
+			return HttpTrackerMessage.parse(ByteBuffer.wrap(os.toByteArray()),
+					torrent);
 		}
 
 		private Map<String, String> prepareParameters(AnnounceEvent event,
@@ -226,7 +168,22 @@ public abstract class TrackerClient {
 
 	}
 
+	/**
+	 * Talks to Udp tracker
+	 * 
+	 * @author AnDyX
+	 * 
+	 */
 	public static class UdpTrackerClient extends TrackerClient {
+		private long connectionId;
+
+		public long getConnectionId() {
+			return connectionId;
+		}
+
+		public void setConnectionId(long connectionId) {
+			this.connectionId = connectionId;
+		}
 
 		public UdpTrackerClient(String url) {
 			super(url);
@@ -236,14 +193,36 @@ public abstract class TrackerClient {
 		public TrackerMessage announce(AnnounceEvent event,
 				SharedTorrent torrent, String id, InetSocketAddress address)
 				throws Exception {
-			URI uri = new URI(this.trackerUrl);
 
+			if (getStatus() != Status.CONNECTED) {
+				byte[] request = ConnectUDPTrackerMessage.craft().getData()
+						.array();
+				TrackerMessage message = UDPTrackerMessage.parse(send(request),
+						torrent);
+				if (message instanceof ConnectUDPTrackerMessage) {
+					this.setConnectionId(((ConnectUDPTrackerMessage) message)
+							.getConnectionId());
+				} else
+					throw new Exception("Invalid response");
+			}
+
+			byte[] request = AnnounceUDPTrackerMessage
+					.craft(event, getConnectionId(), torrent, id, address)
+					.getData().array();
+			TrackerMessage message = UDPTrackerMessage.parse(send(request),
+					torrent);
+
+			return message;
+		}
+
+		private ByteBuffer send(byte[] request) throws URISyntaxException,
+				IOException {
 			byte[] receiveData = new byte[1024];
+
+			URI uri = new URI(this.trackerUrl);
 			DatagramSocket clientSocket = new DatagramSocket();
 			clientSocket.setSoTimeout(10 * 1000);
 			InetAddress IPAddress = InetAddress.getByName(uri.getHost());
-
-			byte[] request = ConnectUDPMessage.craft().getData().array();
 
 			DatagramPacket sendPacket = new DatagramPacket(request,
 					request.length, IPAddress, uri.getPort());
@@ -251,11 +230,12 @@ public abstract class TrackerClient {
 			DatagramPacket receivePacket = new DatagramPacket(receiveData,
 					receiveData.length);
 			clientSocket.receive(receivePacket);
-			ByteArrayInputStream is = new ByteArrayInputStream(
-					receivePacket.getData());
 
+			ByteBuffer result = ByteBuffer.wrap(receivePacket.getData(), 0,
+					receivePacket.getLength());
 			clientSocket.close();
-			return null;
+
+			return result;
 		}
 	}
 }

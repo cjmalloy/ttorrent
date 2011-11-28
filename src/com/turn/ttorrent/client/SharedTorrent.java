@@ -195,8 +195,9 @@ public class SharedTorrent extends Torrent implements PeerActivityListener {
 			this.piecesHashes = ByteBuffer.wrap(this.decoded_info.get("pieces")
 					.getBytes());
 
-			if (this.piecesHashes.capacity() / Torrent.PIECE_HASH_SIZE
-					* this.pieceLength < this.getSize()) {
+			if ((long) this.piecesHashes.capacity()
+					/ (long) Torrent.PIECE_HASH_SIZE * (long) this.pieceLength < this
+						.getSize()) {
 				throw new IllegalArgumentException("Torrent size does not "
 						+ "match the number of pieces and the piece size!");
 			}
@@ -336,8 +337,8 @@ public class SharedTorrent extends Torrent implements PeerActivityListener {
 			// length. Let's make sure we get the right piece length in any
 			// situation.
 			long off = ((long) idx) * this.pieceLength;
-			int len = Math.min((int) (this.bucket.size() - off),
-					this.pieceLength);
+			int len = (int) Math.min((long) (this.bucket.size() - off),
+					(long) this.pieceLength);
 
 			this.pieces[idx] = new Piece(this.bucket, idx, off, len, hash,
 					this.isSeeder());
