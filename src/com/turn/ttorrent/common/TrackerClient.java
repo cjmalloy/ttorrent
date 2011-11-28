@@ -217,7 +217,7 @@ public abstract class TrackerClient {
 
 		private ByteBuffer send(byte[] request) throws URISyntaxException,
 				IOException {
-			byte[] receiveData = new byte[1024];
+			byte[] receiveData = new byte[65535];
 
 			URI uri = new URI(this.trackerUrl);
 			DatagramSocket clientSocket = new DatagramSocket();

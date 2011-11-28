@@ -297,7 +297,7 @@ public abstract class TrackerMessage {
 		 *             match the protocol requirements.
 		 */
 		public static UDPTrackerMessage parse(ByteBuffer buffer,
-				SharedTorrent torrent) throws ParseException {
+				SharedTorrent torrent) throws Exception {
 			buffer.rewind();
 
 			Type type = Type.get((char) buffer.getInt());
@@ -374,17 +374,32 @@ public abstract class TrackerMessage {
 			this.peers = peers;
 		}
 
+		@SuppressWarnings("unused")
 		public static AnnounceUDPTrackerMessage parse(ByteBuffer buffer,
-				SharedTorrent torrent) throws MessageValidationException {
+				SharedTorrent torrent) throws Exception {
+			List<Peer> result = new ArrayList<Peer>();
+
 			buffer.rewind();
-			buffer.getLong();
+			buffer.getInt();
 
 			int transactionId = buffer.getInt();
 			int interval = buffer.getInt();
 			int leechers = buffer.getInt();
 			int seeders = buffer.getInt();
 
-			return new AnnounceUDPTrackerMessage(buffer, 0, transactionId, null);
+			while (buffer.remaining() > 6) {
+				byte[] ip = new byte[4];
+				buffer.get(ip);
+				int port = buffer.getShort();
+				if (port < 0)
+					port += 65536;
+				Peer peer = new Peer(InetAddress.getByAddress(ip).toString(),
+						port, null);
+				result.add(peer);
+			}
+
+			return new AnnounceUDPTrackerMessage(buffer, 0, transactionId,
+					result);
 		}
 
 		public static AnnounceUDPTrackerMessage craft(AnnounceEvent event,
@@ -425,7 +440,8 @@ public abstract class TrackerMessage {
 			buffer.put(add);
 
 			buffer.putInt(0);
-			buffer.putShort((short) 0);
+			buffer.putInt(100);
+			buffer.putShort((short) address.getPort());
 
 			return new AnnounceUDPTrackerMessage(buffer, connectionId,
 					transactionId, null);

@@ -31,6 +31,7 @@ import com.turn.ttorrent.bcodec.InvalidBEncodingException;
 import com.turn.ttorrent.client.message.TrackerMessage;
 import com.turn.ttorrent.client.message.TrackerMessage.HttpTrackerMessage;
 import com.turn.ttorrent.common.TrackerClient;
+import com.turn.ttorrent.common.TrackerClient.Status;
 
 /**
  * BitTorrent client tracker announce thread.
@@ -281,6 +282,8 @@ public class Announce implements Runnable, AnnounceResponseListener {
 
 						TrackerMessage result = tracker.announce(event,
 								torrent, this.id, this.address);
+
+						tracker.setStatus(Status.CONNECTED);
 
 						if (!inhibitEvent) {
 							for (AnnounceResponseListener listener : this.listeners) {
