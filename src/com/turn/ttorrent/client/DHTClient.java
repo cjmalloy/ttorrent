@@ -253,9 +253,6 @@ public class DHTClient implements Runnable {
 
 						result.add(newPeer);
 
-						if (containsDHTPeer) {
-							handleNewDHTPeer(newPeer);
-						}
 					}
 
 					client.handleAnnounceResponse(result);

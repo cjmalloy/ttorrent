@@ -4,7 +4,11 @@ Changes in relation to the original version
 - connects to all trackers from torrent file,
 - connects to UDP trackers,
 - allows to download files > 2GB,
-- binds to all interfaces instead of localhost.
+- binds to all interfaces instead of localhost,
+- connects to DHT peers.
+
+TODO: reorganize peer management - now it's really oriented for distribution and deployment system 
+   and very inefficient for downloading other torrents.
 
 A Java implementation of the BitTorrent protocol
 ================================================
