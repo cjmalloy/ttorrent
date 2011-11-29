@@ -169,7 +169,6 @@ public class Peer {
 				.append(":").append(this.port).append("/");
 
 		if (this.hasPeerId()) {
-			// s.append(this.hexPeerId.substring(this.hexPeerId.length() - 6));
 			s.append(getPeerName());
 		} else {
 			s.append("?");

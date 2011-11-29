@@ -157,6 +157,8 @@ public class DHTClient implements Runnable {
 
 	private boolean connectToPeer(DHTPeer p) {
 		try {
+			logger.debug("Connecting to {}...", p);
+
 			Map<String, BEValue> pingRequest = new TreeMap<String, BEValue>();
 			pingRequest.put("t", new BEValue("0"));
 			pingRequest.put("y", new BEValue("q"));
@@ -188,6 +190,8 @@ public class DHTClient implements Runnable {
 	}
 
 	private void retrievePeers(DHTPeer peer) throws Exception {
+		logger.debug("Retrieve peers from {}...", peer);
+
 		Map<String, BEValue> get_peersRequest = new TreeMap<String, BEValue>();
 		get_peersRequest.put("t", new BEValue("0"));
 		get_peersRequest.put("y", new BEValue("q"));

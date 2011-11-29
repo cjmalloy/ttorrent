@@ -21,4 +21,17 @@ public class DHTPeer extends Peer {
 		this.status = status;
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder s = new StringBuilder("DHT peer udp://").append(getIp())
+				.append(":").append(getPort()).append("/");
+
+		if (this.getHexPeerId() != null) {
+			s.append(getHexPeerId());
+		} else {
+			s.append("?");
+		}
+
+		return s.toString();
+	}
 }
