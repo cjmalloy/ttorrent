@@ -26,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Observable;
 import java.util.Random;
 import java.util.Set;
@@ -33,7 +34,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -117,6 +117,7 @@ public class Client extends Observable implements Runnable,
 	private InetSocketAddress address;
 	private ConnectionHandler service;
 	private Announce announce;
+	private DHTClient dhtClient;
 	private ConcurrentMap<String, SharingPeer> peers;
 	private ConcurrentMap<String, SharingPeer> connected;
 
@@ -163,6 +164,7 @@ public class Client extends Observable implements Runnable,
 		this.peers = new ConcurrentHashMap<String, SharingPeer>();
 		this.connected = new ConcurrentHashMap<String, SharingPeer>();
 		this.random = new Random(System.currentTimeMillis());
+		this.dhtClient = new DHTClient(this);
 	}
 
 	/**
@@ -316,6 +318,7 @@ public class Client extends Observable implements Runnable,
 
 		this.announce.start();
 		this.service.start();
+		this.dhtClient.start();
 
 		int optimisticIterations = 0;
 		int rateComputationIterations = 0;
@@ -349,6 +352,7 @@ public class Client extends Observable implements Runnable,
 				+ "and announce threads...");
 		this.service.stop();
 		this.announce.stop();
+		this.dhtClient.stop();
 
 		// Close all peer connections
 		logger.debug("Closing all remaining peer connections...");
@@ -584,23 +588,19 @@ public class Client extends Observable implements Runnable,
 	 */
 	@Override
 	public void handleAnnounceResponse(TrackerMessage message) {
-
 		if (message instanceof IAnnounceTrackerMessage) {
 			IAnnounceTrackerMessage announcedMessage = (IAnnounceTrackerMessage) message;
 
 			if (announcedMessage.getPeers() != null) {
-				for (Peer peer : announcedMessage.getPeers())
-					/*
-					 * try { this.processAnnouncedPeer( peer.getPeerId() != null
-					 * ? peer.getPeerId() .array() : null, peer.getIp(), peer
-					 * .getPort()); } catch (Exception e) { logger.error("{}",
-					 * e.getMessage(), e); }
-					 */
-
-					// add to executor
-					peerExecutor.submit(new CallablePeerAnnounce(peer));
+				handleAnnounceResponse(announcedMessage.getPeers());
 			}
 		}
+	}
+
+	public void handleAnnounceResponse(List<Peer> peers) {
+		for (Peer peer : peers)
+			// add to executor
+			peerExecutor.submit(new CallablePeerAnnounce(peer));
 	}
 
 	/**
@@ -780,6 +780,11 @@ public class Client extends Observable implements Runnable,
 				+ "data for peer {}: {}.", peer, ioe.getMessage());
 		this.stop();
 		this.setState(ClientState.ERROR);
+	}
+
+	@Override
+	public void handleNewDHTPeer(Peer peer) {
+		this.dhtClient.handleNewDHTPeer(peer);
 	}
 
 	/** Post download seeding. ************************************************/

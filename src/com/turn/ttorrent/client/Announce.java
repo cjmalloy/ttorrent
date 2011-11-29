@@ -28,10 +28,9 @@ import org.slf4j.LoggerFactory;
 
 import com.turn.ttorrent.bcodec.BEValue;
 import com.turn.ttorrent.bcodec.InvalidBEncodingException;
+import com.turn.ttorrent.client.TrackerClient.Status;
 import com.turn.ttorrent.client.message.TrackerMessage;
 import com.turn.ttorrent.client.message.TrackerMessage.HttpTrackerMessage;
-import com.turn.ttorrent.common.TrackerClient;
-import com.turn.ttorrent.common.TrackerClient.Status;
 
 /**
  * BitTorrent client tracker announce thread.
@@ -174,6 +173,7 @@ public class Announce implements Runnable, AnnounceResponseListener {
 	 *            Whether to force stop the announce thread or not, i.e. not
 	 *            send the final 'stopped' announce request or not.
 	 */
+	@SuppressWarnings("unused")
 	private void stop(boolean hard) {
 		this.forceStop = true;
 		this.stop();
@@ -323,7 +323,7 @@ public class Announce implements Runnable, AnnounceResponseListener {
 				}
 			}
 		} catch (InvalidBEncodingException ibee) {
-			this.stop(true);
+			//this.stop(true);
 		}
 	}
 }

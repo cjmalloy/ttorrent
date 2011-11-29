@@ -16,97 +16,126 @@
 package com.turn.ttorrent.client.peer;
 
 import com.turn.ttorrent.client.Piece;
+import com.turn.ttorrent.common.Peer;
 
 import java.io.IOException;
 
 import java.util.BitSet;
 import java.util.EventListener;
 
-/** EventListener interface for objects that want to handle peer activity
- * events like piece availabitily, or piece completion events, and more.
- *
+/**
+ * EventListener interface for objects that want to handle peer activity events
+ * like piece availabitily, or piece completion events, and more.
+ * 
  * @author mpetazzoni
  */
 public interface PeerActivityListener extends EventListener {
 
-	/** Peer choked handler.
-	 *
+	/**
+	 * Peer choked handler.
+	 * 
 	 * This handler is fired when a peer choked and now refuses to send data to
 	 * us. This means we should not try to request or expect anything from it
 	 * until it becomes ready again.
-	 *
-	 * @param peer The peer that choked.
+	 * 
+	 * @param peer
+	 *            The peer that choked.
 	 */
 	public void handlePeerChoked(SharingPeer peer);
 
-	/** Peer ready handler.
-	 *
+	/**
+	 * Peer ready handler.
+	 * 
 	 * This handler is fired when a peer notified that it is no longer choked.
 	 * This means we can send piece block requests to it and start downloading.
-	 *
-	 * @param peer The peer that became ready.
+	 * 
+	 * @param peer
+	 *            The peer that became ready.
 	 */
 	public void handlePeerReady(SharingPeer peer);
 
-	/** Piece availabitily handler.
-	 *
+	/**
+	 * Piece availabitily handler.
+	 * 
 	 * This handler is fired when an update in piece availabitily is received
 	 * from a peer's HAVE message.
-	 *
-	 * @param peer The peer we got the update from.
-	 * @param piece The piece that became available from this peer.
+	 * 
+	 * @param peer
+	 *            The peer we got the update from.
+	 * @param piece
+	 *            The piece that became available from this peer.
 	 */
 	public void handlePieceAvailability(SharingPeer peer, Piece piece);
 
-	/** Bitfield availabitily handler.
-	 *
+	/**
+	 * Bitfield availabitily handler.
+	 * 
 	 * This handler is fired when an update in piece availabitily is received
 	 * from a peer's BITFIELD message.
-	 *
-	 * @param peer The peer we got the update from.
-	 * @param availablePieces The pieces availabitily bitfield of the peer.
+	 * 
+	 * @param peer
+	 *            The peer we got the update from.
+	 * @param availablePieces
+	 *            The pieces availabitily bitfield of the peer.
 	 */
 	public void handleBitfieldAvailability(SharingPeer peer,
 			BitSet availablePieces);
 
-	/** Piece upload completion handler.
-	 *
+	/**
+	 * Piece upload completion handler.
+	 * 
 	 * This handler is fired when a piece has been uploaded entirely to a peer.
-	 *
-	 * @param peer The peer the piece was sent to.
-	 * @param piece The piece in question.
+	 * 
+	 * @param peer
+	 *            The peer the piece was sent to.
+	 * @param piece
+	 *            The piece in question.
 	 */
 	public void handlePieceSent(SharingPeer peer, Piece piece);
 
-	/** Piece download completion handler.
-	 *
+	/**
+	 * Piece download completion handler.
+	 * 
 	 * This handler is fired when a piece has been downloaded entirely and the
 	 * piece data has been revalidated.
-	 *
+	 * 
 	 * <b>Note:</b> the piece may <em>not</em> be valid after it has been
 	 * downloaded, in which case appropriate action should be taken to
 	 * redownload the piece.
-	 *
-	 * @param peer The peer we got this piece from.
-	 * @param piece The piece in question.
+	 * 
+	 * @param peer
+	 *            The peer we got this piece from.
+	 * @param piece
+	 *            The piece in question.
 	 */
 	public void handlePieceCompleted(SharingPeer peer, Piece piece)
-		throws IOException;
+			throws IOException;
 
-	/** Peer disconnection handler.
-	 *
+	/**
+	 * Peer disconnection handler.
+	 * 
 	 * This handler is fired when a peer disconnects, or is disconnected due to
 	 * protocol violation.
-	 *
-	 * @param peer The peer we got this piece from.
+	 * 
+	 * @param peer
+	 *            The peer we got this piece from.
 	 */
 	public void handlePeerDisconnected(SharingPeer peer);
 
-	/** Handler for IOException during peer operation.
-	 *
-	 * @param peer The peer whose activity trigger the exception.
-	 * @param ioe The IOException object, for reporting.
+	/**
+	 * Handler for IOException during peer operation.
+	 * 
+	 * @param peer
+	 *            The peer whose activity trigger the exception.
+	 * @param ioe
+	 *            The IOException object, for reporting.
 	 */
 	public void handleIOException(SharingPeer peer, IOException ioe);
-}
 
+	/**
+	 * Announces new DHT peer.
+	 * 
+	 * @param peer
+	 */
+	public void handleNewDHTPeer(Peer peer);
+}

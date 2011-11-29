@@ -574,6 +574,7 @@ public class SharingPeer extends Peer implements MessageListener {
 			break;
 		case PORT:
 			dhtPort = ((PortMessage) msg).getPort();
+			fireNewDHTPeer(new Peer(this.getIp(), dhtPort, null));
 			break;
 		}
 	}
@@ -673,6 +674,17 @@ public class SharingPeer extends Peer implements MessageListener {
 	private void fireIOException(IOException ioe) {
 		for (PeerActivityListener listener : this.listeners) {
 			listener.handleIOException(this, ioe);
+		}
+	}
+
+	/**
+	 * Fire the new DHT peer appears.
+	 * 
+	 * @param peer
+	 */
+	private void fireNewDHTPeer(Peer peer) {
+		for (PeerActivityListener listener : this.listeners) {
+			listener.handleNewDHTPeer(peer);
 		}
 	}
 

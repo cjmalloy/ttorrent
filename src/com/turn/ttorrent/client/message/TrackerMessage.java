@@ -397,11 +397,11 @@ public abstract class TrackerMessage {
 				byte[] port = new byte[2];
 				buffer.get(port);
 
-				int p = (port[1] >= 0 ? port[1] : port[1] + 256) * 256
-						+ (port[0] >= 0 ? port[0] : port[0] + 256);
+				int p = (port[0] >= 0 ? port[0] : port[0] + 256) * 256
+						+ (port[1] >= 0 ? port[1] : port[1] + 256);
 
-				Peer peer = new Peer(InetAddress.getByAddress(ip).toString(),
-						p, null);
+				Peer peer = new Peer(InetAddress.getByAddress(ip)
+						.getHostAddress(), p, null);
 				result.add(peer);
 			}
 

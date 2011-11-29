@@ -1,4 +1,4 @@
-package com.turn.ttorrent.common;
+package com.turn.ttorrent.client;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -25,12 +25,12 @@ import com.turn.ttorrent.bcodec.BDecoder;
 import com.turn.ttorrent.bcodec.BEValue;
 import com.turn.ttorrent.bcodec.BEncoder;
 import com.turn.ttorrent.client.Announce.AnnounceEvent;
-import com.turn.ttorrent.client.SharedTorrent;
 import com.turn.ttorrent.client.message.TrackerMessage;
 import com.turn.ttorrent.client.message.TrackerMessage.AnnounceUDPTrackerMessage;
 import com.turn.ttorrent.client.message.TrackerMessage.ConnectUDPTrackerMessage;
 import com.turn.ttorrent.client.message.TrackerMessage.HttpTrackerMessage;
 import com.turn.ttorrent.client.message.TrackerMessage.UDPTrackerMessage;
+import com.turn.ttorrent.common.Torrent;
 
 /**
  * Talks to trackers.

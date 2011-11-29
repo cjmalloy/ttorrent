@@ -16,6 +16,7 @@
 package com.turn.ttorrent.client;
 
 import com.turn.ttorrent.bcodec.InvalidBEncodingException;
+import com.turn.ttorrent.common.Peer;
 import com.turn.ttorrent.common.Torrent;
 import com.turn.ttorrent.client.peer.PeerActivityListener;
 import com.turn.ttorrent.client.peer.SharingPeer;
@@ -762,5 +763,9 @@ public class SharedTorrent extends Torrent implements PeerActivityListener {
 																					 * Do
 																					 * nothing
 																					 */
+	}
+
+	@Override
+	public void handleNewDHTPeer(Peer peer) {
 	}
 }

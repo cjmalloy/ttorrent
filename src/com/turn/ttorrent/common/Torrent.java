@@ -19,6 +19,7 @@ import com.turn.ttorrent.bcodec.BDecoder;
 import com.turn.ttorrent.bcodec.BEValue;
 import com.turn.ttorrent.bcodec.BEncoder;
 import com.turn.ttorrent.bcodec.InvalidBEncodingException;
+import com.turn.ttorrent.client.TrackerClient;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
