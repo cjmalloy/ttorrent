@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,8 +118,9 @@ public class DHTClient implements Runnable {
 
 		while (!this.stop) {
 			try {
+				ExecutorService executor = Executors.newFixedThreadPool(1,
+						new RetrievePeersThreadFactory());
 
-				ExecutorService executor = Executors.newFixedThreadPool(1);
 				synchronized (dhtPeers) {
 					for (DHTPeer peer : dhtPeers.values()) {
 						executor.submit(new RetrievePeers(peer));
@@ -353,6 +355,19 @@ public class DHTClient implements Runnable {
 					logger.error(e.toString());
 				}
 			}
+		}
+	}
+
+	static class RetrievePeersThreadFactory implements ThreadFactory {
+		private static int id = 1;
+
+		@Override
+		public Thread newThread(Runnable r) {
+			Thread thread = new Thread(r);
+			thread.setDaemon(true);
+			thread.setName("bt-dht-get-peers-" + Integer.toString(id));
+			id++;
+			return thread;
 		}
 	}
 }

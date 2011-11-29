@@ -38,6 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.ConsoleAppender;
@@ -126,7 +127,8 @@ public class Client extends Observable implements Runnable,
 	/**
 	 * for checking peers
 	 */
-	private ExecutorService peerExecutor = Executors.newFixedThreadPool(20);
+	private ExecutorService peerExecutor = Executors.newFixedThreadPool(20,
+			new ResolveClientThreadFactory());
 
 	/*
 	 * Definies ports for listening incoming connections
@@ -924,6 +926,19 @@ public class Client extends Observable implements Runnable,
 			} catch (Exception e) {
 				logger.error("{}", e.getMessage(), e);
 			}
+		}
+	}
+
+	static class ResolveClientThreadFactory implements ThreadFactory {
+		private static int id = 1;
+
+		@Override
+		public Thread newThread(Runnable r) {
+			Thread thread = new Thread(r);
+			thread.setDaemon(true);
+			thread.setName("bt-new-client-" + Integer.toString(id));
+			id++;
+			return thread;
 		}
 	}
 }
