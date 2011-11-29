@@ -74,9 +74,6 @@ public class ConnectionHandler implements Runnable {
 	private static final Logger logger = LoggerFactory
 			.getLogger(ConnectionHandler.class);
 
-	public static final int PORT_RANGE_START = 6881;
-	public static final int PORT_RANGE_END = 6889;
-
 	private SharedTorrent torrent;
 	private String id;
 	private ServerSocket socket;
@@ -104,8 +101,8 @@ public class ConnectionHandler implements Runnable {
 	 *             When the service can't be started because no port in the
 	 *             defined range is available or usable.
 	 */
-	ConnectionHandler(SharedTorrent torrent, String id, InetAddress address)
-			throws IOException {
+	ConnectionHandler(SharedTorrent torrent, String id, InetAddress address,
+			int port_range_start, int port_range_end) throws IOException {
 		this.torrent = torrent;
 		this.id = id;
 
@@ -113,7 +110,7 @@ public class ConnectionHandler implements Runnable {
 
 		// Bind to the first available port in the range
 		// [PORT_RANGE_START; PORT_RANGE_END].
-		for (int port = ConnectionHandler.PORT_RANGE_START; port <= ConnectionHandler.PORT_RANGE_END; port++) {
+		for (int port = port_range_start; port <= port_range_end; port++) {
 			InetSocketAddress tryAddress = new InetSocketAddress("0.0.0.0",
 					port);
 

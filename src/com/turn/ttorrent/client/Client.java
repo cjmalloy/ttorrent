@@ -123,7 +123,16 @@ public class Client extends Observable implements Runnable,
 
 	private Random random;
 
+	/**
+	 * for checking peers
+	 */
 	private ExecutorService peerExecutor = Executors.newFixedThreadPool(20);
+
+	/*
+	 * Definies ports for listening incoming connections
+	 */
+	public int port_range_start = 4000;
+	public int port_range_end = 4040;
 
 	/**
 	 * Initialize the BitTorrent client.
@@ -144,7 +153,8 @@ public class Client extends Observable implements Runnable,
 
 		// Initialize the incoming connection handler and register ourselves to
 		// it.
-		this.service = new ConnectionHandler(this.torrent, this.id, address);
+		this.service = new ConnectionHandler(this.torrent, this.id, address,
+				port_range_start, port_range_end);
 		this.service.register(this);
 		this.address = this.service.getSocketAddress();
 
@@ -276,6 +286,22 @@ public class Client extends Observable implements Runnable,
 	 */
 	public boolean isSeed() {
 		return this.torrent.isComplete();
+	}
+
+	public int getPort_range_start() {
+		return port_range_start;
+	}
+
+	public void setPort_range_start(int port_range_start) {
+		this.port_range_start = port_range_start;
+	}
+
+	public int getPort_range_end() {
+		return port_range_end;
+	}
+
+	public void setPort_range_end(int port_range_end) {
+		this.port_range_end = port_range_end;
 	}
 
 	/**
