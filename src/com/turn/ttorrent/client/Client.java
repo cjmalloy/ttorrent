@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -359,13 +360,19 @@ public class Client extends Observable implements Runnable,
 		while (!this.stop) {
 			// we don't use normal way of connecting peer so add peers here
 			if (!this.torrent.isComplete()) {
+				List<SharingPeer> peersToConnect = new ArrayList<SharingPeer>();
 				for (int i = 0; i < Client.VOLUNTARY_OUTBOUND_CONNECTIONS
 						- this.connected.size(); i++) {
 					SharingPeer peer = sharedPeersManager
 							.getFirstNotConnectedPeer();
 					if (peer != null) {
-						peerExecutor.submit(new CallablePeerAnnounce(peer));
+						peersToConnect.add(peer);
 					}
+				}
+
+				for (SharingPeer peer : peersToConnect) {
+					sharedPeersManager.updatePeer(peer);
+					peerExecutor.submit(new CallablePeerAnnounce(peer));
 				}
 			}
 
@@ -775,6 +782,9 @@ public class Client extends Observable implements Runnable,
 		}
 
 		peer.reset();
+		peer.setPeerStatus(PeerStatus.CONNECTION_FAILED);
+		peer.setLastPeerActivityTime();
+		sharedPeersManager.updatePeer(peer);
 	}
 
 	@Override

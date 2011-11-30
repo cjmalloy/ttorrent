@@ -326,6 +326,8 @@ public class SharingPeer extends Peer implements MessageListener {
 			}
 		}
 
+		this.peerStatus = PeerStatus.CONNECTION_FAILED;
+		
 		this.firePeerDisconnected();
 		this.requestedPiece = null;
 	}
