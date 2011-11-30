@@ -92,6 +92,7 @@ public class Handshake {
 							+ Handshake.BITTORRENT_PROTOCOL_IDENTIFIER.length());
 
 			byte[] reserved = new byte[8];
+			reserved[7] = 1; //suport for DHT
 			ByteBuffer infoHash = ByteBuffer.wrap(torrentInfoHash);
 			ByteBuffer peerId = ByteBuffer.wrap(clientPeerId);
 

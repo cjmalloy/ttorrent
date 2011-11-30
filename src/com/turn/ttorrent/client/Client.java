@@ -128,7 +128,7 @@ public class Client extends Observable implements Runnable,
 	/**
 	 * for checking peers
 	 */
-	private ExecutorService peerExecutor = Executors.newFixedThreadPool(10,
+	private ExecutorService peerExecutor = Executors.newFixedThreadPool(2,
 			new ResolveClientThreadFactory());
 
 	/*
@@ -374,7 +374,8 @@ public class Client extends Observable implements Runnable,
 					sharedPeersManager.updatePeer(peer);
 					peerExecutor.submit(new CallablePeerAnnounce(peer));
 				}
-			}
+			} else
+				break;
 
 			optimisticIterations = (optimisticIterations == 0 ? Client.OPTIMISTIC_UNCHOKE_ITERATIONS
 					: optimisticIterations - 1);

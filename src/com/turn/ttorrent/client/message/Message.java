@@ -677,11 +677,12 @@ public abstract class Message {
 		public static PortMessage parse(ByteBuffer buffer, SharedTorrent torrent)
 				throws MessageValidationException {
 			buffer.rewind();
-			buffer.get();
-			int port = buffer.getShort();
-			if (port < 0)
-				port += 65536;
-			return new PortMessage(buffer, port);
+			byte[] port = new byte[2];
+			buffer.get(port);
+			return new PortMessage(buffer, (port[0] >= 0 ? port[0]
+					: port[0] + 256)
+					* 256
+					+ (port[1] >= 0 ? port[1] : port[1] + 256));
 		}
 
 		public String toString() {
