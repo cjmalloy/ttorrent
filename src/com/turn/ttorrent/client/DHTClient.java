@@ -255,7 +255,7 @@ public class DHTClient implements Runnable {
 
 					}
 
-					client.handleAnnounceResponse(result);
+					client.handleAnnounceResponse(result, true);
 				}
 			}
 		}

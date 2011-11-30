@@ -15,18 +15,13 @@
 
 package com.turn.ttorrent.client.peer;
 
-import com.turn.ttorrent.common.Peer;
-import com.turn.ttorrent.client.Piece;
-import com.turn.ttorrent.client.SharedTorrent;
-import com.turn.ttorrent.client.message.Message;
-import com.turn.ttorrent.client.message.Message.PortMessage;
-
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -34,6 +29,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.client.Piece;
+import com.turn.ttorrent.client.SharedTorrent;
+import com.turn.ttorrent.client.message.Message;
+import com.turn.ttorrent.client.message.Message.PortMessage;
+import com.turn.ttorrent.common.Peer;
 
 /**
  * A peer exchanging on a torrent with the BitTorrent client.
@@ -71,6 +72,10 @@ public class SharingPeer extends Peer implements MessageListener {
 	private static final Logger logger = LoggerFactory
 			.getLogger(SharingPeer.class);
 
+	public enum PeerStatus {
+		NOT_CHECKED, CONNECTED, CONNECTION_FAILED;
+	};
+
 	private static final int MAX_PIPELINED_REQUESTS = 5;
 
 	private boolean choking;
@@ -95,6 +100,18 @@ public class SharingPeer extends Peer implements MessageListener {
 
 	private byte[] reservedBytes = null;
 	private int dhtPort = -1;
+
+	/**
+	 * Status of our peer
+	 */
+	private PeerStatus peerStatus = PeerStatus.NOT_CHECKED;
+
+	/**
+	 * When anything happened with this peer.
+	 */
+	private Date lastPeerActivityTime = new Date();
+
+	private boolean fromDHTClient = false;
 
 	/**
 	 * Create a new sharing peer on a given torrent.
@@ -577,6 +594,8 @@ public class SharingPeer extends Peer implements MessageListener {
 			fireNewDHTPeer(new Peer(this.getIp(), dhtPort, null));
 			break;
 		}
+
+		this.setLastPeerActivityTime();
 	}
 
 	/**
@@ -700,6 +719,30 @@ public class SharingPeer extends Peer implements MessageListener {
 	public boolean supportDHT() {
 		return reservedBytes != null && reservedBytes.length > 7
 				&& (reservedBytes[7] & 1) != 0;
+	}
+
+	public boolean isFromDHTClient() {
+		return fromDHTClient;
+	}
+
+	public void setFromDHTClient(boolean fromDHTClient) {
+		this.fromDHTClient = fromDHTClient;
+	}
+
+	public PeerStatus getPeerStatus() {
+		return peerStatus;
+	}
+
+	public void setPeerStatus(PeerStatus peerStatus) {
+		this.peerStatus = peerStatus;
+	}
+
+	public Date getLastPeerActivityTime() {
+		return lastPeerActivityTime;
+	}
+
+	public void setLastPeerActivityTime() {
+		this.lastPeerActivityTime = new Date();
 	}
 
 	/**
