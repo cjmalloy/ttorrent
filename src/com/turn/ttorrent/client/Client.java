@@ -146,6 +146,11 @@ public class Client extends Observable implements Runnable,
 	private final SharingPeersManager sharedPeersManager;
 
 	/**
+	 * If you need input stream wrapper
+	 */
+	private static Class<?> inputStreamWrapperClass = null;
+
+	/**
 	 * Initialize the BitTorrent client.
 	 * 
 	 * @param address
@@ -342,6 +347,15 @@ public class Client extends Observable implements Runnable,
 
 	public void setPort_range_end(int port_range_end) {
 		this.port_range_end = port_range_end;
+	}
+
+	public static Class<?> getInputStreamWrapperClass() {
+		return inputStreamWrapperClass;
+	}
+
+	public static void setInputStreamWrapperClass(
+			Class<?> inputStreamWrapperClass) {
+		Client.inputStreamWrapperClass = inputStreamWrapperClass;
 	}
 
 	/**
