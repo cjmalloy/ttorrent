@@ -15,13 +15,9 @@
 
 package com.turn.ttorrent.client;
 
-import com.turn.ttorrent.common.Torrent;
-import com.turn.ttorrent.client.peer.SharingPeer;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -35,6 +31,9 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.client.peer.SharingPeer;
+import com.turn.ttorrent.common.Torrent;
 
 /**
  * Incoming peer connections service.
@@ -101,8 +100,8 @@ public class ConnectionHandler implements Runnable {
 	 *             When the service can't be started because no port in the
 	 *             defined range is available or usable.
 	 */
-	ConnectionHandler(SharedTorrent torrent, String id, InetAddress address,
-			int port_range_start, int port_range_end) throws IOException {
+	ConnectionHandler(SharedTorrent torrent, String id, int port_range_start,
+			int port_range_end) throws IOException {
 		this.torrent = torrent;
 		this.id = id;
 

@@ -15,12 +15,15 @@
 
 package com.turn.ttorrent.client;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -117,7 +120,7 @@ public class Client extends Observable implements Runnable,
 	private boolean stop;
 	private long seed;
 
-	private InetSocketAddress address;
+	private InetSocketAddress peerAddress;
 	private ConnectionHandler service;
 	private Announce announce;
 	private DHTClient dhtClient;
@@ -161,28 +164,56 @@ public class Client extends Observable implements Runnable,
 
 		// Initialize the incoming connection handler and register ourselves to
 		// it.
-		this.service = new ConnectionHandler(this.torrent, this.id, address,
+		this.service = new ConnectionHandler(this.torrent, this.id,
 				port_range_start, port_range_end);
 		this.service.register(this);
-		this.address = this.service.getSocketAddress();
+		this.peerAddress = new InetSocketAddress(address, this.service
+				.getSocketAddress().getPort());
+
+		setExternalAddress();
 
 		// Initialize the announce request thread, and register ourselves to it
 		// as well.
-		this.announce = new Announce(this.torrent, this.id, this.address);
+		this.announce = new Announce(this.torrent, this.id, this.peerAddress);
 		this.announce.register(this);
 
-		logger.info(
-				"BitTorrent client [..{}] for {} started and "
-						+ "listening at {}:{}...",
+		logger.info("BitTorrent client [..{}] for {} started and "
+				+ "listening at {}:{}...",
 				new Object[] { this.hexId.substring(this.hexId.length() - 6),
 						this.torrent.getName(),
-						this.address.getAddress().getHostName(),
-						this.address.getPort() });
+						this.peerAddress.getAddress().getHostName(),
+						this.peerAddress.getPort() });
 
 		this.connected = new ConcurrentHashMap<String, SharingPeer>();
 		this.random = new Random(System.currentTimeMillis());
 		this.dhtClient = new DHTClient(this);
 		this.sharedPeersManager = new SharingPeersManager(this.torrent);
+
+	}
+
+	private void setExternalAddress() {
+		try {
+			URL whatismyip = new URL("http://checkip.dyndns.org:8245/");
+			BufferedReader in = null;
+			try {
+				in = new BufferedReader(new InputStreamReader(
+						whatismyip.openStream()));
+
+				String ip = in.readLine(); // you get the IP as a String
+
+				if (ip.indexOf(":") > 0) {
+					ip = ip.substring(ip.indexOf(":") + 1,
+							ip.indexOf("<", ip.indexOf(":") + 1)).trim();
+					peerAddress = new InetSocketAddress(
+							InetAddress.getByName(ip), peerAddress.getPort());
+				}
+			} finally {
+				if (in != null)
+					in.close();
+			}
+		} catch (Exception e) {
+			logger.error("Couldn't get externap IP: {}", e.getMessage(), e);
+		}
 	}
 
 	/**
