@@ -91,6 +91,7 @@ public class DHTClient implements Runnable {
 
 		if (this.thread == null || !this.thread.isAlive()) {
 			this.thread = new Thread(this);
+			this.thread.setDaemon(true);
 			this.thread.setName("bt-dht-client");
 			this.thread.start();
 		}

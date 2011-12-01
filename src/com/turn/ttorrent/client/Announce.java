@@ -146,6 +146,7 @@ public class Announce implements Runnable, AnnounceResponseListener {
 		if (this.thread == null || !this.thread.isAlive()) {
 			this.thread = new Thread(this);
 			this.thread.setName("bt-announce");
+			this.thread.setDaemon(true);
 			this.thread.start();
 		}
 	}

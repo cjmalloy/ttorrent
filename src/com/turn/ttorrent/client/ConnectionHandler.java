@@ -161,6 +161,7 @@ public class ConnectionHandler implements Runnable {
 
 		if (this.thread == null || !this.thread.isAlive()) {
 			this.thread = new Thread(this);
+			this.thread.setDaemon(true);
 			this.thread.setName("bt-serve");
 			this.thread.start();
 		}

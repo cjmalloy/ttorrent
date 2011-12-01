@@ -280,6 +280,7 @@ public class Client extends Observable implements Runnable,
 
 		if (this.thread == null || !this.thread.isAlive()) {
 			this.thread = new Thread(this);
+			this.thread.setDaemon(true);
 			this.thread.setName("bt-client(.."
 					+ this.hexId.substring(this.hexId.length() - 6)
 							.toUpperCase() + ")");
@@ -437,6 +438,7 @@ public class Client extends Observable implements Runnable,
 		this.service.stop();
 		this.announce.stop();
 		this.dhtClient.stop();
+		this.peerExecutor.shutdownNow();
 
 		// Close all peer connections
 		logger.debug("Closing all remaining peer connections...");
