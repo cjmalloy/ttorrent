@@ -3,8 +3,6 @@ package com.turn.ttorrent.client;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -222,22 +220,22 @@ public class DHTClient implements Runnable {
 				responseValues = responseValues.get("r").getMap();
 
 				byte[] value = null;
-				boolean containsDHTPeer = false;
+				boolean containsDHTNodes = false;
 
 				if (responseValues.containsKey("values")) {
 					value = responseValues.get("values").getBytes();
 				} else if (responseValues.containsKey("nodes")) {
 					value = responseValues.get("nodes").getBytes();
-					containsDHTPeer = true;
+					containsDHTNodes = true;
 				}
 
 				if (value != null) {
 					List<Peer> result = new ArrayList<Peer>();
 					ByteBuffer buffer = ByteBuffer.wrap(value);
-					while (buffer.remaining() >= (containsDHTPeer ? 26 : 6)) {
+					while (buffer.remaining() >= (containsDHTNodes ? 26 : 6)) {
 						byte[] dhtId = new byte[20];
 
-						if (containsDHTPeer)
+						if (containsDHTNodes)
 							buffer.get(dhtId);
 
 						byte[] ip = new byte[4];
@@ -252,7 +250,11 @@ public class DHTClient implements Runnable {
 						Peer newPeer = new Peer(InetAddress.getByAddress(ip)
 								.getHostAddress(), p, null);
 
-						result.add(newPeer);
+						if (containsDHTNodes) {
+							handleNewDHTPeer(newPeer);
+						} else {
+							result.add(newPeer);
+						}
 
 					}
 
@@ -264,24 +266,9 @@ public class DHTClient implements Runnable {
 
 	private ByteBuffer send(DHTPeer p, byte[] request)
 			throws URISyntaxException, IOException {
-		byte[] receiveData = new byte[65535];
-
-		DatagramSocket clientSocket = new DatagramSocket();
-		clientSocket.setSoTimeout(10 * 1000);
-		InetAddress IPAddress = InetAddress.getByName(p.getIp());
-
-		DatagramPacket sendPacket = new DatagramPacket(request, request.length,
-				IPAddress, p.getPort());
-		clientSocket.send(sendPacket);
-		DatagramPacket receivePacket = new DatagramPacket(receiveData,
-				receiveData.length);
-		clientSocket.receive(receivePacket);
-
-		ByteBuffer result = ByteBuffer.wrap(receivePacket.getData(), 0,
-				receivePacket.getLength());
-		clientSocket.close();
-
-		return result;
+		InetAddress ipAddress = InetAddress.getByName(p.getIp());
+		return UDPConnectionManager.getInstance().send(ipAddress, p.getPort(),
+				request);
 	}
 
 	/**

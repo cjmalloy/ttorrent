@@ -2,6 +2,7 @@ package jd.plugins.hoster;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 
 import jd.PluginWrapper;
@@ -15,6 +16,7 @@ import jd.plugins.LinkStatus;
 import jd.plugins.PluginException;
 import jd.plugins.PluginForHost;
 import jd.plugins.download.DownloadInterface;
+import jd.plugins.download.DownloadInterface.Chunk;
 import jd.utils.locale.JDL;
 
 import org.apache.log4j.BasicConfigurator;
@@ -26,17 +28,18 @@ import com.turn.ttorrent.client.Client;
 import com.turn.ttorrent.client.Client.ClientState;
 import com.turn.ttorrent.client.SharedTorrent;
 
-@HostPlugin(revision = "$Revision: 1 $", interfaceVersion = 2, names = { "bittorrent" }, urls = { "file:///.*\\.torrent" }, flags = { 0 })
+@HostPlugin(revision = "$Revision: 10000 $", interfaceVersion = 2, names = { "bittorrent" }, urls = { "file:///.*\\.torrent" }, flags = { 0 })
 public class TorrentFile extends PluginForHost {
-    private static final String WAIT_HOSTERFULL  = "WAIT_HOSTERFULL";
+    private static final String WAIT_HOSTERFULL = "WAIT_HOSTERFULL";
 
-    private static final String SSL_CONNECTION   = "SSL_CONNECTION2";
+    private static final String SSL_CONNECTION = "SSL_CONNECTION2";
 
     private static final String HTTPS_WORKAROUND = "HTTPS_WORKAROUND";
 
-    private Client              client           = null;
+    private Client client = null;
 
-    @SuppressWarnings("deprecation")
+    private Long speed = new Long(0);
+
     public TorrentFile(PluginWrapper wrapper) {
         super(wrapper);
         this.setConfigElements();
@@ -48,18 +51,7 @@ public class TorrentFile extends PluginForHost {
     }
 
     private void setConfigElements() {
-
-       // getConfig().addEntry(new ConfigEntry(ConfigContainer.TYPE_SPINNER, this.getPluginConfig(), TorrentFile.SSL_CONNECTION, "10", 1, 1, 1).setDefaultValue(16));
-        getConfig().addEntry(new ConfigEntry(ConfigContainer.TYPE_CHECKBOX, this.getPluginConfig(), TorrentFile.HTTPS_WORKAROUND, JDL.L("plugins.hoster.rapidshare.com.https", "Use HTTPS workaround for ISP Block")).setDefaultValue(false));
-        /* caused issues lately because it seems some ip's are sharedhosting */
-        // this.config.addEntry(new ConfigEntry(ConfigContainer.TYPE_CHECKBOX,
-        // this.getPluginConfig(), Rapidshare.PRE_RESOLVE,
-        // JDL.L("plugins.hoster.rapidshare.com.resolve",
-        // "Use IP instead of hostname")).setDefaultValue(false));
-
-        getConfig().addEntry(new ConfigEntry(ConfigContainer.TYPE_SEPARATOR));
-        getConfig().addEntry(new ConfigEntry(ConfigContainer.TYPE_CHECKBOX, this.getPluginConfig(), TorrentFile.WAIT_HOSTERFULL, JDL.L("plugins.hoster.rapidshare.com.waithosterfull", "Wait if all FreeUser Slots are full")).setDefaultValue(true));
-
+        config.addEntry(new ConfigEntry(ConfigContainer.TYPE_SPINNER, getPluginConfig(), "MAX_UPLOAD_KB", JDL.L("plugins.hoster.bittorrent.max_upload_kb", "Max Upload (kb)"), 0, 500).setDefaultValue(20).setStep(1));
     }
 
     @Override
@@ -86,15 +78,24 @@ public class TorrentFile extends PluginForHost {
                 client = new Client(InetAddress.getByName(System.getenv("HOSTNAME")), SharedTorrent.fromFile(new File(getFileName(downloadURL)), new File(downloadLink.getFilePackage().getDownloadDirectory())));
 
                 this.dl = new TorrentDownloadInterface(this, downloadLink, null);
-                this.dl.setResume(true);
-                this.dl.setChunkNum(this.client.getTorrent().getPieceCount());
+                this.dl.setResume(false);
 
                 downloadLink.setDownloadSize(client.getTorrent().getSize());
                 if (!client.getTorrent().isMultifile()) downloadLink.setName(client.getTorrent().getName());
+
+                Chunk ch = dl.new Chunk(0, 0, null, null) {
+
+                    @Override
+                    public long getSpeed() {
+                        return speed;
+                    }
+                };
+                ch.setInProgress(true);
+                dl.getChunks().add(ch);
             }
 
             client.download();
-            downloadLink.getLinkStatus().addStatus(LinkStatus.DOWNLOADINTERFACE_IN_PROGRESS);
+            downloadLink.getLinkStatus().addStatus(LinkStatus.PLUGIN_IN_PROGRESS);
 
             long before = 0;
             long last = 0;
@@ -103,22 +104,30 @@ public class TorrentFile extends PluginForHost {
             while (true) {
                 if (client.getState() == ClientState.DONE || client.getState() == ClientState.ERROR) break;
 
-                downloadLink.setDownloadCurrent(client.getTorrent().getDownloaded());
-                if (System.currentTimeMillis() - lastTime > 1000) {
-                    last = client.getTorrent().getDownloaded();
-                    // speed = ((last - before) / (System.currentTimeMillis() -
-                    // lastTime)) * 1000l;
-                    lastTime = System.currentTimeMillis();
-                    before = last;
-                    downloadLink.requestGuiUpdate();
-                    downloadLink.setChunksProgress(new long[] { last });
-                }
+                if (client.getState() == ClientState.SHARING) {
 
-                synchronized (this) {
-                    try {
-                        this.wait(10 * 1000);
-                    } catch (InterruptedException e) {
+                    downloadLink.getLinkStatus().addStatus(LinkStatus.DOWNLOADINTERFACE_IN_PROGRESS);
 
+                    downloadLink.setDownloadCurrent(client.getTorrent().getDownloaded());
+                    if (System.currentTimeMillis() - lastTime > 1000) {
+                        last = client.getTorrent().getDownloaded();
+                        speed = ((last - before) / (System.currentTimeMillis() - lastTime)) * 1000l;
+                        lastTime = System.currentTimeMillis();
+                        before = last;
+
+                        String info = String.format("BitTorrent client %s, %d/%d peers, %d/%d/%d pieces", client.getState().name(), client.getConnectedPeerCount(), client.getAllPeerCount(), client.getTorrent().getCompletedPieces().cardinality(), client.getTorrent().getAvailablePieces().cardinality(), client.getTorrent().getPieceCount());
+
+                        downloadLink.getLinkStatus().setStatusText(info);
+                        downloadLink.setChunksProgress(new long[] { last });
+                        downloadLink.requestGuiUpdate();
+                    }
+
+                    synchronized (this) {
+                        try {
+                            this.wait(10 * 1000);
+                        } catch (InterruptedException e) {
+
+                        }
                     }
                 }
             }
@@ -166,10 +175,28 @@ public class TorrentFile extends PluginForHost {
             return false;
         }
 
-        //@Override
+        // @Override
         public synchronized void stopDownload() {
             if (client != null) client.stop();
         }
+
+        @Override
+        public synchronized boolean externalDownloadStop() {
+            if (client != null) client.stop();
+            return true;
+        }
+
     }
 
+    static class TorrentMeteredThrottledInputStream extends InputStream {
+        public TorrentMeteredThrottledInputStream(InputStream is) {
+
+        }
+
+        @Override
+        public int read() throws IOException {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+    }
 }

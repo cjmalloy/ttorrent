@@ -293,7 +293,7 @@ public class ConnectionHandler implements Runnable {
 
 		logger.debug("Connecting to {}...", peer);
 		try {
-			socket.connect(address, 3 * 1000);
+			socket.connect(address, 30 * 1000);
 		} catch (IOException ioe) {
 			// Could not connect to peer, abort
 			logger.warn("Could not connect to {}: {}", peer, ioe.getMessage());

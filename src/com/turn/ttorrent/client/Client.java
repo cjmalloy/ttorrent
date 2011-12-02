@@ -175,7 +175,7 @@ public class Client extends Observable implements Runnable,
 		this.peerAddress = new InetSocketAddress(address, this.service
 				.getSocketAddress().getPort());
 
-		setExternalAddress();
+		// setExternalAddress();
 
 		// Initialize the announce request thread, and register ourselves to it
 		// as well.
@@ -191,11 +191,15 @@ public class Client extends Observable implements Runnable,
 
 		this.connected = new ConcurrentHashMap<String, SharingPeer>();
 		this.random = new Random(System.currentTimeMillis());
+
+		UDPConnectionManager.init(this.service.getSocketAddress().getPort());
+
 		this.dhtClient = new DHTClient(this);
 		this.sharedPeersManager = new SharingPeersManager(this.torrent);
 
 	}
 
+	@SuppressWarnings("unused")
 	private void setExternalAddress() {
 		try {
 			URL whatismyip = new URL("http://checkip.dyndns.org:8245/");
@@ -503,6 +507,14 @@ public class Client extends Observable implements Runnable,
 						String.format("%.2f", this.torrent.getCompletion()),
 						String.format("%.2f", dl / 1024.0),
 						String.format("%.2f", ul / 1024.0) });
+	}
+
+	public int getConnectedPeerCount() {
+		return this.connected.size();
+	}
+
+	public int getAllPeerCount() {
+		return sharedPeersManager.peersCount();
 	}
 
 	/**

@@ -4,8 +4,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -251,25 +249,10 @@ public abstract class TrackerClient {
 
 		private ByteBuffer send(byte[] request) throws URISyntaxException,
 				IOException {
-			byte[] receiveData = new byte[65535];
-
 			URI uri = new URI(this.trackerUrl);
-			DatagramSocket clientSocket = new DatagramSocket();
-			clientSocket.setSoTimeout(10 * 1000);
-			InetAddress IPAddress = InetAddress.getByName(uri.getHost());
-
-			DatagramPacket sendPacket = new DatagramPacket(request,
-					request.length, IPAddress, uri.getPort());
-			clientSocket.send(sendPacket);
-			DatagramPacket receivePacket = new DatagramPacket(receiveData,
-					receiveData.length);
-			clientSocket.receive(receivePacket);
-
-			ByteBuffer result = ByteBuffer.wrap(receivePacket.getData(), 0,
-					receivePacket.getLength());
-			clientSocket.close();
-
-			return result;
+			InetAddress ipAddress = InetAddress.getByName(uri.getHost());
+			return UDPConnectionManager.getInstance().send(ipAddress,
+					uri.getPort(), request);
 		}
 	}
 }

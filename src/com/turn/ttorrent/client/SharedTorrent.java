@@ -416,6 +416,10 @@ public class SharedTorrent extends Torrent implements PeerActivityListener {
 		return this.pieces.length;
 	}
 
+	public int getPieceLength() {
+		return pieceLength;
+	}
+
 	/**
 	 * Return a copy of the bitfield of available pieces for this torrent.
 	 * 
