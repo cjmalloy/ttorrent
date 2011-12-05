@@ -49,6 +49,7 @@ import org.apache.log4j.PatternLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.turn.ttorrent.client.DHTClient.DHTClientStatus;
 import com.turn.ttorrent.client.message.Message;
 import com.turn.ttorrent.client.message.TrackerMessage;
 import com.turn.ttorrent.client.message.TrackerMessage.IAnnounceTrackerMessage;
@@ -400,12 +401,13 @@ public class Client extends Observable implements Runnable,
 			this.setState(ClientState.SHARING);
 		}
 
-		this.announce.start();
 		this.service.start();
 		this.dhtClient.start();
 
 		int optimisticIterations = 0;
 		int rateComputationIterations = 0;
+
+		boolean announceServiceStarted = false;
 
 		while (!this.stop) {
 			// we don't use normal way of connecting peer so add peers here
@@ -426,6 +428,12 @@ public class Client extends Observable implements Runnable,
 				}
 			} else
 				break;
+
+			if (!announceServiceStarted
+					&& this.dhtClient.getStatus() == DHTClientStatus.STARTED) {
+				announceServiceStarted = true;
+				this.announce.start();
+			}
 
 			optimisticIterations = (optimisticIterations == 0 ? Client.OPTIMISTIC_UNCHOKE_ITERATIONS
 					: optimisticIterations - 1);

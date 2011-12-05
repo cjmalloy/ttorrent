@@ -62,6 +62,8 @@ public class DHTClient implements Runnable {
 
 		handleNewDHTPeer(new Peer("router.utorrent.com", 6881, null), 1);
 		handleNewDHTPeer(new Peer("router.bittorrent.com", 6881, null), 1);
+
+		this.status = DHTClientStatus.STARTED;
 	}
 
 	private void generateUniqueKey() {
@@ -161,8 +163,13 @@ public class DHTClient implements Runnable {
 				p.setStatus(this.connectToPeer(p) ? DHTPeerStatus.OPERABLE
 						: DHTPeerStatus.NOT_OPERABLE);
 				if (p.getStatus() == DHTPeerStatus.OPERABLE && level > 0
-						&& level <= 3) {
+						&& level <= 5) {
 					retrieveNodes(p, level);
+					try {
+						retrievePeers(p);
+					} catch (Exception e) {
+						logger.error(e.toString());
+					}
 				}
 			}
 		}
@@ -260,7 +267,7 @@ public class DHTClient implements Runnable {
 							Peer newPeer = new Peer(InetAddress
 									.getByAddress(ip).getHostAddress(), p, null);
 
-							if (level > 0 && level < 3)
+							if (level > 0 && level < 5)
 								handleNewDHTPeer(newPeer, level + 1);
 						}
 					}
@@ -335,9 +342,10 @@ public class DHTClient implements Runnable {
 
 						if (containsDHTNodes) {
 							handleNewDHTPeer(newPeer);
-						} else {
-							result.add(newPeer);
 						}
+						// } else {
+						result.add(newPeer);
+						// }
 
 					}
 
