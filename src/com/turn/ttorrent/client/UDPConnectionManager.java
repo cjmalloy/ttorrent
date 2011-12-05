@@ -20,7 +20,7 @@ public class UDPConnectionManager {
 
 	private UDPConnectionManager(int port) throws SocketException {
 		clientSocket = new DatagramSocket(port);
-		clientSocket.setSoTimeout(60 * 1000);
+		clientSocket.setSoTimeout(10 * 1000);
 	}
 
 	public synchronized ByteBuffer send(InetAddress IPAddress, int port,

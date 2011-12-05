@@ -39,6 +39,10 @@ public class DHTClient implements Runnable {
 	private static final Logger logger = LoggerFactory
 			.getLogger(DHTClient.class);
 
+	public enum DHTClientStatus {
+		INITIALISING, STARTED
+	};
+
 	private byte[] dhtKey = new byte[20];
 
 	/** DHTClient thread and control. */
@@ -47,6 +51,8 @@ public class DHTClient implements Runnable {
 	private final Client client;
 	private final ConcurrentMap<String, DHTPeer> dhtPeers;
 
+	private DHTClientStatus status = DHTClientStatus.INITIALISING;
+
 	public DHTClient(Client client) {
 		this.client = client;
 
@@ -54,8 +60,8 @@ public class DHTClient implements Runnable {
 
 		dhtPeers = new ConcurrentHashMap<String, DHTPeer>();
 
-		handleNewDHTPeer(new Peer("router.utorrent.com", 6881, null));
-		handleNewDHTPeer(new Peer("router.bittorrent.com", 6881, null));
+		handleNewDHTPeer(new Peer("router.utorrent.com", 6881, null), 1);
+		handleNewDHTPeer(new Peer("router.bittorrent.com", 6881, null), 1);
 	}
 
 	private void generateUniqueKey() {
@@ -144,12 +150,20 @@ public class DHTClient implements Runnable {
 	}
 
 	public void handleNewDHTPeer(Peer peer) {
+		handleNewDHTPeer(peer, -1);
+	}
+
+	private void handleNewDHTPeer(Peer peer, int level) {
 		DHTPeer p = getOrCreatePeer(null, peer.getIp(), peer.getPort());
 
 		synchronized (p) {
 			if (p.getStatus() == DHTPeerStatus.NOT_CHECKED) {
 				p.setStatus(this.connectToPeer(p) ? DHTPeerStatus.OPERABLE
 						: DHTPeerStatus.NOT_OPERABLE);
+				if (p.getStatus() == DHTPeerStatus.OPERABLE && level > 0
+						&& level <= 3) {
+					retrieveNodes(p, level);
+				}
 			}
 		}
 	}
@@ -186,6 +200,75 @@ public class DHTClient implements Runnable {
 		}
 
 		return false;
+	}
+
+	private void retrieveNodes(DHTPeer peer, int level) {
+		try {
+			logger.debug("Retrieve nodes from {}...", peer);
+
+			Map<String, BEValue> get_peersRequest = new TreeMap<String, BEValue>();
+			get_peersRequest.put("t", new BEValue("0"));
+			get_peersRequest.put("y", new BEValue("q"));
+			get_peersRequest.put("q", new BEValue("find_node"));
+
+			Map<String, BEValue> get_peersARequest = new TreeMap<String, BEValue>();
+			get_peersARequest.put("id", new BEValue(dhtKey));
+			get_peersARequest.put("target", new BEValue(dhtKey));
+
+			get_peersRequest.put("a", new BEValue(get_peersARequest));
+
+			ByteArrayOutputStream os = new ByteArrayOutputStream();
+			BEncoder.bencode(get_peersRequest, os);
+			ByteBuffer response = send(peer, os.toByteArray());
+			BEValue get_peerResponse = BDecoder
+					.bdecode(new ByteArrayInputStream(response.array()));
+
+			if (get_peerResponse.getMap().containsKey("e"))
+				throw new Exception(get_peerResponse.getMap().get("e")
+						.getString());
+
+			if (get_peerResponse.getValue() instanceof Map) {
+				Map<String, BEValue> responseValues = get_peerResponse.getMap();
+
+				if (responseValues.containsKey("r")
+						&& responseValues.get("r").getValue() instanceof Map) {
+					responseValues = responseValues.get("r").getMap();
+
+					byte[] value = null;
+
+					if (responseValues.containsKey("nodes")) {
+						value = responseValues.get("nodes").getBytes();
+					}
+
+					if (value != null) {
+						ByteBuffer buffer = ByteBuffer.wrap(value);
+						while (buffer.remaining() >= 26) {
+							byte[] dhtId = new byte[20];
+
+							buffer.get(dhtId);
+
+							byte[] ip = new byte[4];
+							buffer.get(ip);
+
+							byte[] port = new byte[2];
+							buffer.get(port);
+
+							int p = (port[0] >= 0 ? port[0] : port[0] + 256)
+									* 256
+									+ (port[1] >= 0 ? port[1] : port[1] + 256);
+
+							Peer newPeer = new Peer(InetAddress
+									.getByAddress(ip).getHostAddress(), p, null);
+
+							if (level > 0 && level < 3)
+								handleNewDHTPeer(newPeer, level + 1);
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			logger.error(" {}...", e.toString());
+		}
 	}
 
 	private void retrievePeers(DHTPeer peer) throws Exception {
@@ -326,6 +409,10 @@ public class DHTClient implements Runnable {
 		}
 
 		return peer;
+	}
+
+	public DHTClientStatus getStatus() {
+		return status;
 	}
 
 	class RetrievePeers implements Runnable {

@@ -106,10 +106,14 @@ public class TorrentFile extends PluginForHost {
 
                 if (client.getState() == ClientState.SHARING) {
 
-                    downloadLink.getLinkStatus().addStatus(LinkStatus.DOWNLOADINTERFACE_IN_PROGRESS);
-
-                    downloadLink.setDownloadCurrent(client.getTorrent().getDownloaded());
                     if (System.currentTimeMillis() - lastTime > 1000) {
+
+                        int statusToSet = speed >= 0 ? LinkStatus.DOWNLOADINTERFACE_IN_PROGRESS : LinkStatus.PLUGIN_IN_PROGRESS;
+
+                        if (downloadLink.getLinkStatus().getLatestStatus() != statusToSet) downloadLink.getLinkStatus().addStatus(statusToSet);
+
+                        downloadLink.setDownloadCurrent(client.getTorrent().getDownloaded());
+
                         last = client.getTorrent().getDownloaded();
                         speed = ((last - before) / (System.currentTimeMillis() - lastTime)) * 1000l;
                         lastTime = System.currentTimeMillis();
