@@ -7,8 +7,9 @@ Changes in relation to the original version
 - binds to all interfaces instead of localhost,
 - connects to DHT peers.
 
-TODO: reorganize peer management - now it's really oriented for distribution and deployment system 
-   and very inefficient for downloading other torrents.
+TODO: 
+- look at the uTorrent communication,
+- secure connections. 
 
 A Java implementation of the BitTorrent protocol
 ================================================
