@@ -1,7 +1,10 @@
 package com.turn.ttorrent.client.peer;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -36,18 +39,50 @@ public class SharingPeersManager {
 	}
 
 	/**
+	 * Returns n first peers on peers list that is not connected. Return null if
+	 * all peers are connected or list is empty.
+	 * 
+	 * @return
+	 */
+	public List<SharingPeer> getFirstNotConnectedPeers(int count) {
+		synchronized (this.peersLockObject) {
+			List<SharingPeer> peersToConnect = new ArrayList<SharingPeer>();
+			for (int i = 0; i < count; i++) {
+				SharingPeer peer = getFirstNotConnectedPeer();
+				if (peer != null) {
+					peersToConnect.add(peer);
+				}
+			}
+
+			for (SharingPeer peer : peersToConnect) {
+				updatePeer(peer);
+			}
+
+			return peersToConnect;
+		}
+	}
+
+	/**
 	 * Returns first peer on peers list that is not connected. Return null if
 	 * all peers are connected or list is empty. Note: it removes peer from
 	 * collection - so peer need to be added again.
 	 * 
 	 * @return
 	 */
-	public SharingPeer getFirstNotConnectedPeer() {
+	private SharingPeer getFirstNotConnectedPeer() {
 		SharingPeer peer = null;
 
 		synchronized (this.peersLockObject) {
 			if (this.peers.size() > 0) {
-				if (this.peers.first().getPeerStatus() != PeerStatus.CONNECTED) {
+				SharingPeer temp = this.peers.first();
+				if (temp.getPeerStatus() != PeerStatus.CONNECTED) {
+					if (temp.getPeerStatus() == PeerStatus.CONNECTION_FAILED
+							&& temp.getLastPeerActivityTime()
+									.compareTo(
+											new Date(
+													System.currentTimeMillis() - 15 * 60 * 1000)) >= 0) {
+						return null;
+					}
 					peer = this.peers.pollFirst();
 					peersMap.remove(peer.hasPeerId() ? peer.getHexPeerId()
 							: peer.getHostIdentifier());

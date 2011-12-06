@@ -60,10 +60,6 @@ public class DHTClient implements Runnable {
 
 		dhtPeers = new ConcurrentHashMap<String, DHTPeer>();
 
-		handleNewDHTPeer(new Peer("router.utorrent.com", 6881, null), 1);
-		handleNewDHTPeer(new Peer("router.bittorrent.com", 6881, null), 1);
-
-		this.status = DHTClientStatus.STARTED;
 	}
 
 	private void generateUniqueKey() {
@@ -122,6 +118,11 @@ public class DHTClient implements Runnable {
 	@Override
 	public void run() {
 		logger.info("Starting dht client thread ...");
+
+		handleNewDHTPeer(new Peer("router.utorrent.com", 6881, null), 1);
+		handleNewDHTPeer(new Peer("router.bittorrent.com", 6881, null), 1);
+
+		this.status = DHTClientStatus.STARTED;
 
 		while (!this.stop) {
 			try {
