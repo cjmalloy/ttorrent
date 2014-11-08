@@ -377,6 +377,9 @@ public class ConnectionHandler implements Runnable {
 
 		len.rewind();
 		int pstrlen = len.get();
+		if (pstrlen < 0) {
+			throw new IOException("Handshake size is negative (" + pstrlen + ")");
+		}
 
 		data = ByteBuffer.allocate(Handshake.BASE_HANDSHAKE_LENGTH + pstrlen);
 		data.put((byte)pstrlen);
