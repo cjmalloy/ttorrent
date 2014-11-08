@@ -131,7 +131,12 @@ class PeerExchange {
 		// If we have pieces, start by sending a BITFIELD message to the peer.
 		BitSet pieces = this.torrent.getCompletedPieces();
 		if (pieces.cardinality() > 0) {
-			this.send(PeerMessage.BitfieldMessage.craft(pieces));
+			//this.send(PeerMessage.BitfieldMessage.craft(pieces));
+
+			// Workaround for error sending bitfield
+			for (int i = pieces.nextSetBit(0); i >= 0; i = pieces.nextSetBit(i+1)) {
+				this.send(PeerMessage.HaveMessage.craft(i));
+			}
 		}
 	}
 
