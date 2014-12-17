@@ -15,10 +15,10 @@
  */
 package com.turn.ttorrent.client.announce;
 
-import com.turn.ttorrent.common.Peer;
-
 import java.util.EventListener;
 import java.util.List;
+
+import com.turn.ttorrent.common.Peer;
 
 
 /**

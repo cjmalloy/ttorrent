@@ -15,9 +15,9 @@
  */
 package com.turn.ttorrent.common.protocol.udp;
 
-import com.turn.ttorrent.common.protocol.TrackerMessage;
-
 import java.nio.ByteBuffer;
+
+import com.turn.ttorrent.common.protocol.TrackerMessage;
 
 /**
  * Base class for UDP tracker messages.

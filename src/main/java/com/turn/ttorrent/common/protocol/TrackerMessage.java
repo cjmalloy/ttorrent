@@ -15,10 +15,10 @@
  */
 package com.turn.ttorrent.common.protocol;
 
-import com.turn.ttorrent.common.Peer;
-
 import java.nio.ByteBuffer;
 import java.util.List;
+
+import com.turn.ttorrent.common.Peer;
 
 
 /**

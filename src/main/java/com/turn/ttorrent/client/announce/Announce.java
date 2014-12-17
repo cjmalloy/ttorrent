@@ -15,10 +15,6 @@
  */
 package com.turn.ttorrent.client.announce;
 
-import com.turn.ttorrent.client.SharedTorrent;
-import com.turn.ttorrent.common.Peer;
-import com.turn.ttorrent.common.protocol.TrackerMessage.*;
-
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.net.UnknownServiceException;
@@ -30,6 +26,10 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.client.SharedTorrent;
+import com.turn.ttorrent.common.Peer;
+import com.turn.ttorrent.common.protocol.TrackerMessage.AnnounceRequestMessage;
 
 /**
  * BitTorrent announce sub-system.

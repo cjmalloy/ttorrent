@@ -15,8 +15,6 @@
  */
 package com.turn.ttorrent.common;
 
-import com.turn.ttorrent.common.Torrent;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;

@@ -15,8 +15,6 @@
  */
 package com.turn.ttorrent.tracker;
 
-import com.turn.ttorrent.common.Torrent;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -32,6 +30,8 @@ import org.simpleframework.transport.connect.Connection;
 import org.simpleframework.transport.connect.SocketConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.common.Torrent;
 
 /**
  * BitTorrent tracker.

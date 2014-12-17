@@ -15,12 +15,11 @@
  */
 package com.turn.ttorrent.client.peer;
 
-import com.turn.ttorrent.client.Piece;
-
 import java.io.IOException;
-
 import java.util.BitSet;
 import java.util.EventListener;
+
+import com.turn.ttorrent.client.Piece;
 
 
 /**

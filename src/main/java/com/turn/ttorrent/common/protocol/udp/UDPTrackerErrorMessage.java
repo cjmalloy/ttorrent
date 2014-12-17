@@ -15,11 +15,11 @@
  */
 package com.turn.ttorrent.common.protocol.udp;
 
-import com.turn.ttorrent.common.Torrent;
-import com.turn.ttorrent.common.protocol.TrackerMessage;
-
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+
+import com.turn.ttorrent.common.Torrent;
+import com.turn.ttorrent.common.protocol.TrackerMessage;
 
 
 /**

@@ -15,11 +15,11 @@
  */
 package com.turn.ttorrent.common.protocol;
 
-import com.turn.ttorrent.client.SharedTorrent;
-
 import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.util.BitSet;
+
+import com.turn.ttorrent.client.SharedTorrent;
 
 /**
  * BitTorrent peer protocol messages representations.

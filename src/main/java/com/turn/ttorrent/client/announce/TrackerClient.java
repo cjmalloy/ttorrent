@@ -15,16 +15,17 @@
  */
 package com.turn.ttorrent.client.announce;
 
-import com.turn.ttorrent.client.SharedTorrent;
-import com.turn.ttorrent.common.Peer;
-import com.turn.ttorrent.common.protocol.TrackerMessage;
-import com.turn.ttorrent.common.protocol.TrackerMessage.*;
-
 import java.net.URI;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import com.turn.ttorrent.client.SharedTorrent;
+import com.turn.ttorrent.common.Peer;
+import com.turn.ttorrent.common.protocol.TrackerMessage;
+import com.turn.ttorrent.common.protocol.TrackerMessage.AnnounceRequestMessage;
+import com.turn.ttorrent.common.protocol.TrackerMessage.AnnounceResponseMessage;
+import com.turn.ttorrent.common.protocol.TrackerMessage.ErrorMessage;
 
 public abstract class TrackerClient {
 

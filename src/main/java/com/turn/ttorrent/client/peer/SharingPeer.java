@@ -15,11 +15,6 @@
  */
 package com.turn.ttorrent.client.peer;
 
-import com.turn.ttorrent.common.Peer;
-import com.turn.ttorrent.common.protocol.PeerMessage;
-import com.turn.ttorrent.client.Piece;
-import com.turn.ttorrent.client.SharedTorrent;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.SocketException;
@@ -34,6 +29,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.client.Piece;
+import com.turn.ttorrent.client.SharedTorrent;
+import com.turn.ttorrent.common.Peer;
+import com.turn.ttorrent.common.protocol.PeerMessage;
 
 
 /**

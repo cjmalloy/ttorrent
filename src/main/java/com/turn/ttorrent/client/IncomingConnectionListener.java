@@ -15,10 +15,10 @@
  */
 package com.turn.ttorrent.client;
 
-import com.turn.ttorrent.client.peer.SharingPeer;
-
 import java.nio.channels.SocketChannel;
 import java.util.EventListener;
+
+import com.turn.ttorrent.client.peer.SharingPeer;
 
 /**
  * EventListener interface for objects that want to handle incoming peer

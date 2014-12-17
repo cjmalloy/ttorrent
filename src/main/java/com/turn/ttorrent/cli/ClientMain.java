@@ -15,8 +15,7 @@
  */
 package com.turn.ttorrent.cli;
 
-import com.turn.ttorrent.client.Client;
-import com.turn.ttorrent.client.SharedTorrent;
+import jargs.gnu.CmdLineParser;
 
 import java.io.File;
 import java.io.PrintStream;
@@ -28,12 +27,14 @@ import java.net.UnknownHostException;
 import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.Enumeration;
 
-import jargs.gnu.CmdLineParser;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.PatternLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.client.Client;
+import com.turn.ttorrent.client.SharedTorrent;
 
 /**
  * Command-line entry-point for starting a {@link Client}

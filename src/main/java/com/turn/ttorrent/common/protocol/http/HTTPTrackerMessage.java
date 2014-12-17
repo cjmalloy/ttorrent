@@ -15,13 +15,13 @@
  */
 package com.turn.ttorrent.common.protocol.http;
 
-import com.turn.ttorrent.bcodec.BDecoder;
-import com.turn.ttorrent.bcodec.BEValue;
-import com.turn.ttorrent.common.protocol.TrackerMessage;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
+
+import com.turn.ttorrent.bcodec.BDecoder;
+import com.turn.ttorrent.bcodec.BEValue;
+import com.turn.ttorrent.common.protocol.TrackerMessage;
 
 
 /**

@@ -15,20 +15,21 @@
  */
 package com.turn.ttorrent.cli;
 
-import com.turn.ttorrent.tracker.TrackedTorrent;
-import com.turn.ttorrent.tracker.Tracker;
+import jargs.gnu.CmdLineParser;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 
-import jargs.gnu.CmdLineParser;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.PatternLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.tracker.TrackedTorrent;
+import com.turn.ttorrent.tracker.Tracker;
 
 /**
  * Command-line entry-point for starting a {@link Tracker}

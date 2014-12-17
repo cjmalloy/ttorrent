@@ -15,7 +15,7 @@
  */
 package com.turn.ttorrent.cli;
 
-import com.turn.ttorrent.common.Torrent;
+import jargs.gnu.CmdLineParser;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -23,12 +23,10 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Vector;
 
-import jargs.gnu.CmdLineParser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
@@ -37,6 +35,8 @@ import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.PatternLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.common.Torrent;
 
 /**
  * Command-line entry-point for reading and writing {@link Torrent} files.

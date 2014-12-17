@@ -15,11 +15,11 @@
  */
 package com.turn.ttorrent.client;
 
-import com.turn.ttorrent.common.Torrent;
-
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.text.ParseException;
+
+import com.turn.ttorrent.common.Torrent;
 
 
 /**

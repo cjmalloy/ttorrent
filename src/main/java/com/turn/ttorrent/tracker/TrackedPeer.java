@@ -15,10 +15,6 @@
  */
 package com.turn.ttorrent.tracker;
 
-import com.turn.ttorrent.bcodec.BEValue;
-import com.turn.ttorrent.common.Peer;
-import com.turn.ttorrent.common.Torrent;
-
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Date;
@@ -27,6 +23,10 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.bcodec.BEValue;
+import com.turn.ttorrent.common.Peer;
+import com.turn.ttorrent.common.Torrent;
 
 
 /**

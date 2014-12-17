@@ -15,31 +15,15 @@
  */
 package com.turn.ttorrent.client;
 
-import com.turn.ttorrent.client.announce.Announce;
-import com.turn.ttorrent.client.announce.AnnounceException;
-import com.turn.ttorrent.client.announce.AnnounceResponseListener;
-import com.turn.ttorrent.client.peer.PeerActivityListener;
-import com.turn.ttorrent.client.peer.SharingPeer;
-import com.turn.ttorrent.common.Peer;
-import com.turn.ttorrent.common.Torrent;
-import com.turn.ttorrent.common.protocol.PeerMessage;
-import com.turn.ttorrent.common.protocol.TrackerMessage;
-
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -55,20 +39,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import com.turn.ttorrent.client.DHTClient.DHTClientStatus;
-import com.turn.ttorrent.client.message.Message;
-import com.turn.ttorrent.client.message.TrackerMessage;
-import com.turn.ttorrent.client.message.TrackerMessage.IAnnounceTrackerMessage;
-import com.turn.ttorrent.client.peer.PeerActivityListener;
-import com.turn.ttorrent.client.peer.SharingPeer;
-import com.turn.ttorrent.client.peer.SharingPeer.PeerStatus;
-import com.turn.ttorrent.client.peer.SharingPeersManager;
-import com.turn.ttorrent.common.Peer;
-import com.turn.ttorrent.common.Torrent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.turn.ttorrent.client.DHTClient.DHTClientStatus;
+import com.turn.ttorrent.client.announce.Announce;
+import com.turn.ttorrent.client.announce.AnnounceException;
+import com.turn.ttorrent.client.announce.AnnounceResponseListener;
+import com.turn.ttorrent.client.peer.PeerActivityListener;
+import com.turn.ttorrent.client.peer.SharingPeer;
+import com.turn.ttorrent.client.peer.SharingPeersManager;
+import com.turn.ttorrent.common.Peer;
+import com.turn.ttorrent.common.Torrent;
+import com.turn.ttorrent.common.protocol.PeerMessage;
+import com.turn.ttorrent.common.protocol.TrackerMessage;
 
 /**
  * A pure-java BitTorrent client.
