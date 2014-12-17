@@ -30,6 +30,16 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -43,6 +53,19 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import com.turn.ttorrent.client.DHTClient.DHTClientStatus;
+import com.turn.ttorrent.client.message.Message;
+import com.turn.ttorrent.client.message.TrackerMessage;
+import com.turn.ttorrent.client.message.TrackerMessage.IAnnounceTrackerMessage;
+import com.turn.ttorrent.client.peer.PeerActivityListener;
+import com.turn.ttorrent.client.peer.SharingPeer;
+import com.turn.ttorrent.client.peer.SharingPeer.PeerStatus;
+import com.turn.ttorrent.client.peer.SharingPeersManager;
+import com.turn.ttorrent.common.Peer;
+import com.turn.ttorrent.common.Torrent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +109,7 @@ public class Client extends Observable implements Runnable,
 
 	private static final int RATE_COMPUTATION_ITERATIONS = 2;
 	private static final int MAX_DOWNLOADERS_UNCHOKE = 4;
+	private static final int VOLUNTARY_OUTBOUND_CONNECTIONS = 100;
 
 	public enum ClientState {
 		WAITING,
@@ -106,12 +130,36 @@ public class Client extends Observable implements Runnable,
 	private boolean stop;
 	private long seed;
 
+	private InetSocketAddress peerAddress;
 	private ConnectionHandler service;
 	private Announce announce;
+	private DHTClient dhtClient;
 	private ConcurrentMap<String, SharingPeer> peers;
 	private ConcurrentMap<String, SharingPeer> connected;
 
 	private Random random;
+
+	/**
+	 * for checking peers
+	 */
+	private ExecutorService peerExecutor = Executors.newFixedThreadPool(2,
+			new ResolveClientThreadFactory());
+
+	/*
+	 * Definies ports for listening incoming connections
+	 */
+	private int port_range_start = 4000;
+	private int port_range_end = 4040;
+
+	/**
+	 * Shared peers manager
+	 */
+	private final SharingPeersManager sharedPeersManager;
+
+	/**
+	 * If you need input stream wrapper
+	 */
+	private static Class<?> inputStreamWrapperClass = null;
 
 	/**
 	 * Initialize the BitTorrent client.
@@ -155,6 +203,38 @@ public class Client extends Observable implements Runnable,
 		this.peers = new ConcurrentHashMap<String, SharingPeer>();
 		this.connected = new ConcurrentHashMap<String, SharingPeer>();
 		this.random = new Random(System.currentTimeMillis());
+
+		UDPConnectionManager.init(this.service.getSocketAddress().getPort());
+
+		this.dhtClient = new DHTClient(this);
+		this.sharedPeersManager = new SharingPeersManager(this.torrent);
+
+	}
+
+	@SuppressWarnings("unused")
+	private void setExternalAddress() {
+		try {
+			URL whatismyip = new URL("http://checkip.dyndns.org:8245/");
+			BufferedReader in = null;
+			try {
+				in = new BufferedReader(new InputStreamReader(
+						whatismyip.openStream()));
+
+				String ip = in.readLine(); // you get the IP as a String
+
+				if (ip.indexOf(":") > 0) {
+					ip = ip.substring(ip.indexOf(":") + 1,
+							ip.indexOf("<", ip.indexOf(":") + 1)).trim();
+					peerAddress = new InetSocketAddress(
+							InetAddress.getByName(ip), peerAddress.getPort());
+				}
+			} finally {
+				if (in != null)
+					in.close();
+			}
+		} catch (Exception e) {
+			logger.error("Couldn't get externap IP: {}", e.getMessage(), e);
+		}
 	}
 
 	/**
@@ -248,6 +328,7 @@ public class Client extends Observable implements Runnable,
 
 		if (this.thread == null || !this.thread.isAlive()) {
 			this.thread = new Thread(this);
+			this.thread.setDaemon(true);
 			this.thread.setName("bt-client(" +
 				this.self.getShortHexPeerId() + ")");
 			this.thread.start();
@@ -299,6 +380,31 @@ public class Client extends Observable implements Runnable,
 	 */
 	public boolean isSeed() {
 		return this.torrent.isComplete();
+	}
+
+	public int getPort_range_start() {
+		return port_range_start;
+	}
+
+	public void setPort_range_start(int port_range_start) {
+		this.port_range_start = port_range_start;
+	}
+
+	public int getPort_range_end() {
+		return port_range_end;
+	}
+
+	public void setPort_range_end(int port_range_end) {
+		this.port_range_end = port_range_end;
+	}
+
+	public static Class<?> getInputStreamWrapperClass() {
+		return inputStreamWrapperClass;
+	}
+
+	public static void setInputStreamWrapperClass(
+			Class<?> inputStreamWrapperClass) {
+		Client.inputStreamWrapperClass = inputStreamWrapperClass;
 	}
 
 	/**
@@ -357,13 +463,35 @@ public class Client extends Observable implements Runnable,
 			return;
 		}
 
-		this.announce.start();
 		this.service.start();
+		this.dhtClient.start();
 
 		int optimisticIterations = 0;
 		int rateComputationIterations = 0;
 
+		boolean announceServiceStarted = true;
+
 		while (!this.stop) {
+			// we don't use normal way of connecting peer so add peers here
+			if (!this.torrent.isComplete()) {
+				List<SharingPeer> peersToConnect = sharedPeersManager
+						.getFirstNotConnectedPeers(Client.VOLUNTARY_OUTBOUND_CONNECTIONS
+								- this.connected.size());
+
+				for (SharingPeer peer : peersToConnect) {
+					peerExecutor.submit(new CallablePeerAnnounce(peer));
+				}
+			}
+			else {
+				break;
+			}
+
+			if (!announceServiceStarted
+					&& this.dhtClient.getStatus() == DHTClientStatus.STARTED) {
+				announceServiceStarted = true;
+				this.announce.start();
+			}
+
 			optimisticIterations =
 				(optimisticIterations == 0 ?
 				 Client.OPTIMISTIC_UNCHOKE_ITERATIONS :
@@ -404,6 +532,8 @@ public class Client extends Observable implements Runnable,
 		}
 
 		this.announce.stop();
+		this.dhtClient.stop();
+		this.peerExecutor.shutdownNow();
 
 		// Close all peer connections
 		logger.debug("Closing all remaining peer connections...");
@@ -470,6 +600,14 @@ public class Client extends Observable implements Runnable,
 					: ""
 			);
 		}
+	}
+
+	public int getConnectedPeerCount() {
+		return this.connected.size();
+	}
+
+	public int getAllPeerCount() {
+		return sharedPeersManager.peersCount();
 	}
 
 	/**
@@ -694,6 +832,8 @@ public class Client extends Observable implements Runnable,
 			//	   of connecting to peers that need to download
 			//     something).
 			SharingPeer match = this.getOrCreatePeer(peer);
+			match.setFromDHTClient(fromDHTClient);
+			sharedPeersManager.updatePeer(match);
 			if (this.isSeed()) {
 				continue;
 			}
@@ -704,8 +844,46 @@ public class Client extends Observable implements Runnable,
 				}
 			}
 		}
+		// for (Peer peer : peers)
+		// add to executor
+		// peerExecutor.submit(new CallablePeerAnnounce(peer));
 	}
 
+	/**
+	 * Process a peer's information obtained in an announce reply.
+	 * 
+	 * <p>
+	 * Retrieve or create a new peer for the peer information obtained, and
+	 * eventually connect to it.
+	 * </p>
+	 * 
+	 * @param peerId
+	 *            An optional peerId byte array.
+	 * @param ip
+	 *            The peer's IP address.
+	 * @param port
+	 *            The peer's port.
+	 */
+	private void processAnnouncedPeer(SharingPeer peer) {
+		synchronized (peer) {
+			// Attempt to connect to the peer if and only if:
+			// - We're not already connected to it;
+			// - We're not a seeder (we leave the responsibility
+			// of connecting to peers that need to download
+			// something), or we are a seeder but we're still
+			// willing to initiate some outbound connections.
+			if (!peer.isBound()
+					&& (!this.isSeed() || this.connected.size() < Client.VOLUNTARY_OUTBOUND_CONNECTIONS)) {
+				peer.setPeerStatus(PeerStatus.CONNECTED);
+				if (!this.service.connect(peer)) {
+					logger.debug("Failed connect to peer {}.", peer);
+					peer.setPeerStatus(PeerStatus.CONNECTION_FAILED);
+				}
+				peer.setLastPeerActivityTime();
+				sharedPeersManager.updatePeer(peer);
+			}
+		}
+	}
 
 	/** IncomingConnectionListener handler(s). ********************************/
 
@@ -911,6 +1089,10 @@ public class Client extends Observable implements Runnable,
 		peer.unbind(true);
 	}
 
+	@Override
+	public void handleNewDHTPeer(Peer peer) {
+		this.dhtClient.handleNewDHTPeer(peer);
+	}
 
 	/** Post download seeding. ************************************************/
 
