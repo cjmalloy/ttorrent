@@ -1155,4 +1155,35 @@ public class Client extends Observable implements Runnable,
 			}
 		}
 	};
+
+    public class CallablePeerAnnounce implements Runnable {
+
+        private final SharingPeer peer;
+
+        public CallablePeerAnnounce(SharingPeer peer) {
+            this.peer = peer;
+        }
+
+        @Override
+        public void run() {
+            try {
+                processAnnouncedPeer(peer);
+            } catch (Exception e) {
+                logger.error("{}", e.getMessage(), e);
+            }
+        }
+    }
+
+    static class ResolveClientThreadFactory implements ThreadFactory {
+        private static int id = 1;
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread thread = new Thread(r);
+            thread.setDaemon(true);
+            thread.setName("bt-new-client-" + Integer.toString(id));
+            id++;
+            return thread;
+        }
+    }
 }
