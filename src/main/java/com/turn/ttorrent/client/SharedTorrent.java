@@ -42,6 +42,7 @@ import com.turn.ttorrent.client.storage.FileStorage;
 import com.turn.ttorrent.client.storage.TorrentByteStorage;
 import com.turn.ttorrent.client.strategy.RequestStrategy;
 import com.turn.ttorrent.client.strategy.RequestStrategyImplRarest;
+import com.turn.ttorrent.common.Peer;
 import com.turn.ttorrent.common.Torrent;
 
 
@@ -883,4 +884,10 @@ public class SharedTorrent extends Torrent implements PeerActivityListener {
 	@Override
 	public synchronized void handleIOException(SharingPeer peer,
 			IOException ioe) { /* Do nothing */ }
+
+	@Override
+	public void handleNewDHTPeer(Peer peer) {
+		// TODO Auto-generated method stub
+		
+	}
 }

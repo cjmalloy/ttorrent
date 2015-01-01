@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -34,6 +35,7 @@ import com.turn.ttorrent.client.Piece;
 import com.turn.ttorrent.client.SharedTorrent;
 import com.turn.ttorrent.common.Peer;
 import com.turn.ttorrent.common.protocol.PeerMessage;
+import com.turn.ttorrent.common.protocol.PeerMessage.PortMessage;
 
 
 /**
@@ -95,7 +97,15 @@ public class SharingPeer extends Peer implements MessageListener {
 
 	private Set<PeerActivityListener> listeners;
 
+	private byte[] reservedBytes = null;
+	private int dhtPort = -1;
+
 	private Object requestsLock, exchangeLock;
+
+	/**
+	 * When anything happened with this peer.
+	 */
+	private Date lastPeerActivityTime = new Date();
 
 	/**
 	 * Create a new sharing peer on a given torrent.
@@ -625,6 +635,10 @@ public class SharingPeer extends Peer implements MessageListener {
 			case CANCEL:
 				// No need to support
 				break;
+			case PORT:
+				dhtPort = ((PortMessage) msg).getPort();
+				fireNewDHTPeer(new Peer(this.getIp(), dhtPort, null));
+				break;
 		}
 	}
 
@@ -652,6 +666,14 @@ public class SharingPeer extends Peer implements MessageListener {
 		for (PeerActivityListener listener : this.listeners) {
 			listener.handlePeerReady(this);
 		}
+	}
+
+	public Date getLastPeerActivityTime() {
+		return lastPeerActivityTime;
+	}
+
+	public void setLastPeerActivityTime() {
+		this.lastPeerActivityTime = new Date();
 	}
 
 	/**
@@ -737,6 +759,31 @@ public class SharingPeer extends Peer implements MessageListener {
 		for (PeerActivityListener listener : this.listeners) {
 			listener.handleIOException(this, ioe);
 		}
+	}
+
+	/**
+	 * Fire the new DHT peer appears.
+	 * 
+	 * @param peer
+	 */
+	private void fireNewDHTPeer(Peer peer) {
+		for (PeerActivityListener listener : this.listeners) {
+			listener.handleNewDHTPeer(peer);
+		}
+	}
+
+	/**
+	 * Sets reserved bytes for this peer.
+	 * 
+	 * @param reservedBytes
+	 */
+	public void setReservedBytes(byte[] reservedBytes) {
+		this.reservedBytes = reservedBytes;
+	}
+
+	public boolean supportDHT() {
+		return reservedBytes != null && reservedBytes.length > 7
+				&& (reservedBytes[7] & 1) != 0;
 	}
 
 	/**

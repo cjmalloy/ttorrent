@@ -404,8 +404,8 @@ class PeerExchange {
 						ByteBuffer data = message.getData();
 						long size = 0;
 						while (!stop && data.hasRemaining()) {
-						    int written = channel.write(data);
-						    size += written;
+							int written = channel.write(data);
+							size += written;
 							if (written < 0) {
 								throw new EOFException(
 									"Reached end of stream while writing");

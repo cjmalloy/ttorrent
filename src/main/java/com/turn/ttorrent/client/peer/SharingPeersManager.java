@@ -74,12 +74,9 @@ public class SharingPeersManager {
 		synchronized (this.peersLockObject) {
 			if (this.peers.size() > 0) {
 				SharingPeer temp = this.peers.first();
-				if (temp.getPeerStatus() != PeerStatus.CONNECTED) {
-					if (temp.getPeerStatus() == PeerStatus.CONNECTION_FAILED
-							&& temp.getLastPeerActivityTime()
-									.compareTo(
-											new Date(
-													System.currentTimeMillis() - 15 * 60 * 1000)) >= 0) {
+				if (!temp.isConnected()) {
+					if (temp.getLastPeerActivityTime().compareTo(new Date(
+						System.currentTimeMillis() - 15 * 60 * 1000)) >= 0) {
 						return null;
 					}
 					peer = this.peers.pollFirst();
@@ -178,23 +175,9 @@ public class SharingPeersManager {
 				return 0;
 
 			// compare status
-			if (o1.getPeerStatus() != o2.getPeerStatus()) {
-				if (o1.getPeerStatus() == PeerStatus.NOT_CHECKED)
+			if (o1.isConnected() != o2.isConnected()) {
+				if (!o1.isConnected())
 					return 1;
-
-				if (o2.getPeerStatus() == PeerStatus.NOT_CHECKED)
-					return -1;
-
-				if (o1.getPeerStatus() == PeerStatus.CONNECTED)
-					return -1;
-
-				if (o2.getPeerStatus() == PeerStatus.CONNECTED)
-					return 1;
-			}
-
-			// check dht status
-			if (o1.isFromDHTClient() != o2.isFromDHTClient()) {
-				return o1.isFromDHTClient() ? 1 : -1;
 			}
 
 			// check dates

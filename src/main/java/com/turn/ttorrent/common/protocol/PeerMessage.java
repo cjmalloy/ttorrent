@@ -58,7 +58,8 @@ public abstract class PeerMessage {
 		BITFIELD(5),
 		REQUEST(6),
 		PIECE(7),
-		CANCEL(8);
+		CANCEL(8),
+		PORT(9);
 
 		private byte id;
 		Type(int id) {
@@ -178,6 +179,8 @@ public abstract class PeerMessage {
 				return PieceMessage.parse(buffer.slice(), torrent);
 			case CANCEL:
 				return CancelMessage.parse(buffer.slice(), torrent);
+			case PORT:
+				return PortMessage.parse(buffer.slice(), torrent);
 			default:
 				throw new IllegalStateException("Message type should have " +
 						"been properly defined by now.");
@@ -665,6 +668,52 @@ public abstract class PeerMessage {
 		public String toString() {
 			return super.toString() + " #" + this.getPiece() +
 				" (" + this.getLength() + "@" + this.getOffset() + ")";
+		}
+	}
+
+	/**
+	 * Port message
+	 * 
+	 * port: <len=0003><id=9><listen-port>
+	 * 
+	 * @author AnDyX
+	 * 
+	 */
+	public static class PortMessage extends PeerMessage {
+		private static final int BASE_SIZE = 3;
+
+		private final int port;
+
+		public PortMessage(ByteBuffer buffer, int port) {
+			super(Type.PORT, buffer);
+			this.port = port;
+		}
+
+		public int getPort() {
+			return port;
+		}
+
+		public static PortMessage craft(int port) {
+			ByteBuffer buffer = ByteBuffer.allocate(PortMessage.BASE_SIZE + 4);
+			buffer.putInt(PortMessage.BASE_SIZE);
+			buffer.put(PeerMessage.Type.PORT.getTypeByte());
+			buffer.putShort((short) port);
+			return new PortMessage(buffer, port);
+		}
+
+		public static PortMessage parse(ByteBuffer buffer, SharedTorrent torrent)
+				throws MessageValidationException {
+			buffer.rewind();
+			byte[] port = new byte[2];
+			buffer.get(port);
+			return new PortMessage(buffer, (port[0] >= 0 ? port[0]
+					: port[0] + 256)
+					* 256
+					+ (port[1] >= 0 ? port[1] : port[1] + 256));
+		}
+
+		public String toString() {
+			return super.toString() + " #" + this.getPort();
 		}
 	}
 }

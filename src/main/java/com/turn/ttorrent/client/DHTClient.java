@@ -350,7 +350,7 @@ public class DHTClient implements Runnable {
 
 					}
 
-					client.handleAnnounceResponse(result, true);
+					client.handleDiscoveredPeers(result);
 				}
 			}
 		}

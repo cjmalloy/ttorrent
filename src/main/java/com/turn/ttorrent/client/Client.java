@@ -24,6 +24,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -39,6 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -467,9 +469,6 @@ public class Client extends Observable implements Runnable,
 					peerExecutor.submit(new CallablePeerAnnounce(peer));
 				}
 			}
-			else {
-				break;
-			}
 
 			if (!announceServiceStarted
 					&& this.dhtClient.getStatus() == DHTClientStatus.STARTED) {
@@ -817,7 +816,6 @@ public class Client extends Observable implements Runnable,
 			//	   of connecting to peers that need to download
 			//     something).
 			SharingPeer match = this.getOrCreatePeer(peer);
-			match.setFromDHTClient(fromDHTClient);
 			sharedPeersManager.updatePeer(match);
 			if (this.isSeed()) {
 				continue;
@@ -832,42 +830,6 @@ public class Client extends Observable implements Runnable,
 		// for (Peer peer : peers)
 		// add to executor
 		// peerExecutor.submit(new CallablePeerAnnounce(peer));
-	}
-
-	/**
-	 * Process a peer's information obtained in an announce reply.
-	 * 
-	 * <p>
-	 * Retrieve or create a new peer for the peer information obtained, and
-	 * eventually connect to it.
-	 * </p>
-	 * 
-	 * @param peerId
-	 *            An optional peerId byte array.
-	 * @param ip
-	 *            The peer's IP address.
-	 * @param port
-	 *            The peer's port.
-	 */
-	private void processAnnouncedPeer(SharingPeer peer) {
-		synchronized (peer) {
-			// Attempt to connect to the peer if and only if:
-			// - We're not already connected to it;
-			// - We're not a seeder (we leave the responsibility
-			// of connecting to peers that need to download
-			// something), or we are a seeder but we're still
-			// willing to initiate some outbound connections.
-			if (!peer.isBound()
-					&& (!this.isSeed() || this.connected.size() < Client.VOLUNTARY_OUTBOUND_CONNECTIONS)) {
-				peer.setPeerStatus(PeerStatus.CONNECTED);
-				if (!this.service.connect(peer)) {
-					logger.debug("Failed connect to peer {}.", peer);
-					peer.setPeerStatus(PeerStatus.CONNECTION_FAILED);
-				}
-				peer.setLastPeerActivityTime();
-				sharedPeersManager.updatePeer(peer);
-			}
-		}
 	}
 
 	/** IncomingConnectionListener handler(s). ********************************/
@@ -1121,6 +1083,24 @@ public class Client extends Observable implements Runnable,
 		timer.schedule(new ClientShutdown(this, timer), this.seed*1000);
 	}
 
+	public class CallablePeerAnnounce implements Runnable {
+
+		private final SharingPeer peer;
+
+		public CallablePeerAnnounce(SharingPeer peer) {
+			this.peer = peer;
+		}
+
+		@Override
+		public void run() {
+			try {
+				handleDiscoveredPeers(Arrays.asList((Peer) peer));
+			} catch (Exception e) {
+				logger.error("{}", e.getMessage(), e);
+			}
+		}
+	}
+	
 	/**
 	 * Timer task to stop seeding.
 	 *
@@ -1154,36 +1134,18 @@ public class Client extends Observable implements Runnable,
 				this.timer.cancel();
 			}
 		}
-	};
+	}
 
-    public class CallablePeerAnnounce implements Runnable {
+	static class ResolveClientThreadFactory implements ThreadFactory {
+		private static int id = 1;
 
-        private final SharingPeer peer;
-
-        public CallablePeerAnnounce(SharingPeer peer) {
-            this.peer = peer;
-        }
-
-        @Override
-        public void run() {
-            try {
-                processAnnouncedPeer(peer);
-            } catch (Exception e) {
-                logger.error("{}", e.getMessage(), e);
-            }
-        }
-    }
-
-    static class ResolveClientThreadFactory implements ThreadFactory {
-        private static int id = 1;
-
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread thread = new Thread(r);
-            thread.setDaemon(true);
-            thread.setName("bt-new-client-" + Integer.toString(id));
-            id++;
-            return thread;
-        }
-    }
+		@Override
+		public Thread newThread(Runnable r) {
+			Thread thread = new Thread(r);
+			thread.setDaemon(true);
+			thread.setName("bt-new-client-" + Integer.toString(id));
+			id++;
+			return thread;
+		}
+	}
 }
